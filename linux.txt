@@ -1,0 +1,264 @@
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
+
+static bool gRunning;
+
+static const int kWindowWidth = 1500;
+static const int kWindowHeight = 1000;
+
+static XImage *gXImage;
+
+#define Assert(Expression) \
+  if (!(Expression)) {     \
+    *(int *)0 = 0;         \
+  }
+
+#define COUNT_OF(x) \
+  ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
+
+struct user_input {
+  union {
+    bool buttons[8];
+    struct {
+      bool up;
+      bool down;
+      bool left;
+      bool right;
+      bool mouse_left;
+      bool mouse_middle;
+      bool mouse_right;
+
+      bool terminator;
+    };
+  };
+
+  // v3 mouse;
+};
+
+int main(int argc, char const *argv[]) {
+  Display *display;
+  Window window;
+  int screen;
+
+  int X_mouse, Y_mouse;
+  int X_root, Y_root;
+
+  display = XOpenDisplay(0);
+  if (display == 0) {
+    fprintf(stderr, "Cannot open display\n");
+    return 1;
+  }
+
+  screen = DefaultScreen(display);
+
+  int border_color = WhitePixel(display, screen);
+  int bg_color = WhitePixel(display, screen);
+
+  window = XCreateSimpleWindow(display, RootWindow(display, screen), 300, 300,
+                               kWindowWidth, kWindowHeight, 0, border_color,
+                               bg_color);
+
+  XSetStandardProperties(display, window, "Browser", "Hi!", None, NULL, 0,
+                         NULL);
+
+  XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask |
+                                    ButtonPressMask | StructureNotifyMask);
+
+  XMapRaised(display, window);
+
+  Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
+  XSetWMProtocols(display, window, &wmDeleteMessage, 1);
+
+  GC gc;
+  XGCValues gcvalues;
+
+  // Create x image
+  {
+    for (;;) {
+      XEvent e;
+      XNextEvent(display, &e);
+      if (e.type == MapNotify) break;
+    }
+
+    gXImage = XGetImage(display, window, 0, 0, kWindowWidth, kWindowHeight,
+                        AllPlanes, ZPixmap);
+
+    gc = XCreateGC(display, window, 0, &gcvalues);
+  }
+
+  user_input inputs[2];
+  user_input *old_input = &inputs[0];
+  user_input *new_input = &inputs[1];
+  *new_input = {};
+
+  Assert(&new_input->terminator - &new_input->buttons[0] <
+         COUNT_OF(new_input->buttons))
+
+      gRunning = true;
+
+  while (gRunning) {
+    // Process events
+
+    while (XPending(display)) {
+
+      XEvent event;
+      XNextEvent(display, &event);
+
+      /* get info about current pointer position */
+
+
+      // XQueryPointer(display, window,
+      // &event.xbutton.root, &event.xbutton.window,
+      // &event.xbutton.x_root, &event.xbutton.y_root,
+      // &event.xbutton.x, &event.xbutton.y,
+      // &event.xbutton.state);
+      // printf("Mouse Coordinates: %d %d\n", event.xbutton.x, event.xbutton.y);
+
+
+      XQueryPointer(display, window,
+      &event.xbutton.root, &event.xbutton.window,
+      &X_root, &Y_root, &X_mouse, &Y_mouse, &event.xbutton.state);
+      printf("Mouse Coordinates: %d %d\n", X_mouse, Y_mouse);
+
+      KeySym key;
+      char buf[256];
+      char symbol = 0;
+
+      if (XLookupString(&event.xkey, buf, 255, &key, 0) == 1) {
+        symbol = buf[0];
+      }
+
+      bool pressed = false;
+      bool released = false;
+      bool retriggered = false;
+
+      // Process user input
+      if (event.type == KeyPress) {
+        pressed = true;
+      }
+
+      if (event.type == KeyRelease) {
+        if (XEventsQueued(display, QueuedAfterReading)) {
+          XEvent nev;
+          XPeekEvent(display, &nev);
+
+          if (nev.type == KeyPress && nev.xkey.time == event.xkey.time &&
+              nev.xkey.keycode == event.xkey.keycode) {
+            // Ignore. Key wasn't actually released
+            XNextEvent(display, &event);
+            retriggered = true;
+          }
+        }
+        if (!retriggered) {
+          released = true;
+        }
+      }
+
+      if (pressed || released) {
+        if (key == XK_Escape) {
+          gRunning = false;
+        } else if (key == XK_Up) {
+          new_input->up = pressed;
+        } else if (key == XK_Down) {
+          new_input->down = pressed;
+        } else if (key == XK_Left) {
+          new_input->left = pressed;
+        } else if (key == XK_Right) {
+          new_input->right = pressed;
+        }
+      }
+
+      // Close window message
+      if (event.type == ClientMessage) {
+        if (event.xclient.data.l[0] == wmDeleteMessage) {
+          gRunning = false;
+        }
+      }
+    }
+
+    // draw
+    {
+      uint32_t *pixel_data = (uint32_t *)gXImage->data;
+
+      for (int pixel = 0; pixel < kWindowHeight * kWindowWidth; pixel++) {
+        *(pixel_data + pixel) = 0x00FFFF;
+      }
+
+      int formWidth = 200;
+      int formHeight = 200;
+
+      int x = 370;
+      int y = 300;
+
+      if (new_input->up) {
+        y -= 5;
+      }
+      if (new_input->down) {
+        y += 5;
+      }
+      if (new_input->right) {
+        x += 5;
+      }
+      if (new_input->left) {
+        x -= 5;
+      }
+
+      x = X_mouse;
+      y = Y_mouse;
+
+      pixel_data = pixel_data + (kWindowWidth * y) + x;
+      // central position
+      // pixel_data = pixel_data + (kWindowWidth * (kWindowHeight -
+      // formHeight/2) + kWindowWidth - formWidth)/2;
+      for (int v = 0; v < formHeight; v++) {
+        for (int z = 0; z < formWidth; z++) {
+          *(pixel_data + z) = 0xFF0000;
+        }
+        pixel_data = pixel_data + kWindowWidth;
+      }
+
+      // int z = 0;
+      // while (z < 1500*1000) {
+      //   *pixel_data = 0X00FF00;
+      //   pixel_data = pixel_data + 1;
+      //   z = z + 1;
+      // }
+
+      // int a = 0;
+
+      // int *b;
+      // printf("%d\n", a);
+
+      // sizeof(int *);
+
+      // b = &a;
+
+      // *b = 3;
+    }
+
+    XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
+              kWindowHeight);
+
+    // Swap inputs
+    user_input *tmp = old_input;
+    old_input = new_input;
+    new_input = tmp;
+
+    // Zero input
+    *new_input = {};
+
+    // Retain the button state
+    for (int i = 0; i < COUNT_OF(new_input->buttons); i++) {
+      new_input->buttons[i] = old_input->buttons[i];
+    }
+
+    usleep(10000);
+  }
+
+  XCloseDisplay(display);
+
+  return 0;
+}
