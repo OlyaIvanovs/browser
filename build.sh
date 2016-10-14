@@ -1,9 +1,10 @@
 set -e
 
 mkdir -p build
-g++ browser.cpp  -I/usr/include/freetype2 -lfreetype -lX11 -o build/browser -g -std=c++11
+gcc browser2.c  -I/usr/include/freetype2 -lfreetype -lX11 -o build/browser -g
+# g++ browser.cpp  -I/usr/include/freetype2 -lfreetype -lX11 -o build/browser -g -std=c++11
 # ./build/browser /usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-C.ttf "SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE"
-./build/browser
+./build/browser <parse.html
 # ./build/browser /usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-C.ttf 
 
 
