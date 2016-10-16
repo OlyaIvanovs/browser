@@ -83,8 +83,12 @@ int main(int argc, char **argv) {
   int screen = DefaultScreen(display);
   int border_color = WhitePixel(display, screen);
   int bg_color = WhitePixel(display, screen);
-  int x, y;
-  int form_width, form_height;
+
+  int x = 0;
+  int y = 0;
+  int form_width = 0;
+  int form_height = 0;
+
 
   // для парсинга
   struct tnode *root;
@@ -95,7 +99,7 @@ int main(int argc, char **argv) {
 
   int k, l, c, n;
   int i = 0;
-  int m = 0;
+  int tags_num = 0;
 
   root = NULL;
 
@@ -128,6 +132,81 @@ int main(int argc, char **argv) {
     gc = XCreateGC(display, window, 0, &gcvalues);
   }
 
+
+  //парсинг
+  while (getword(word) != EOF) {
+  // для закрывающего тега
+    if (word[0] == '/') {
+      l = 1;
+      while(word[l] != '\0') {
+        word[l-1] = word[l];
+        l++;
+      }
+      word[l-1] = '\0';
+      // удаления тега из списка
+      if ((binsearch(word, keywords, NKEYS)) >= 0) {
+        if (strcmp(stack[stack_size]->name, word) == 0) {
+          stack[stack_size] = NULL;
+          stack_size--;
+          i--;
+        } else {
+          printf("Error: missing %s tag\n", stack[stack_size]->name);
+          return 0;
+        }
+      }
+      // открывающийся тег
+    } else if ((binsearch(word, keywords, NKEYS)) >= 0) {
+      root = addnode(root, word);
+      stack[i] = root;
+      tags_stack[tags_num] = root;
+      stack_size = i;
+      i++;
+      tags_num++;
+      // Yазвание класса
+    } else if (strcmp("class", word) == 0) {
+      while (getword(word) != '>') {
+        if (isalpha(word[0])) {
+          stack[stack_size]->classname = my_strdup(word);
+          break;
+        }
+      }
+      //стили
+    } else if (strcmp("style", word) == 0) {
+      while (getword(word) != '"') ;
+      while (getword(word) != '"') {
+        if (strcmp("height", word) == 0) {
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->height = atoi(word);
+            }
+          }
+        } else if (strcmp("width", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->width = atoi(word);
+            }
+          }
+        }
+      }
+    }
+  }
+
+
+  for (k=0; k<i; k++) {
+    printf("Error: missing %s tag\n", stack[k]->name);
+  }
+
+
+  for (k=0; k<tags_num; k++) {
+    if (tags_stack[k]->css->height)  {
+      form_height = tags_stack[k]->css->height;
+    }
+    if (tags_stack[k]->css->width)  {
+      form_width = tags_stack[k]->css->width;
+    }
+  }
+
+  x = y = 10;
   gRunning = 1;
   while (gRunning) {
     // Process events
@@ -144,74 +223,9 @@ int main(int argc, char **argv) {
       }
     }
 
-
-    //парсинг
-    while (getword(word) != EOF) {
-    // для закрывающего тега
-      if (word[0] == '/') {
-        l = 1;
-        while(word[l] != '\0') {
-          word[l-1] = word[l];
-          l++;
-        }
-        word[l-1] = '\0';
-        // удаления тега из списка
-        if ((binsearch(word, keywords, NKEYS)) >= 0) {
-          if (strcmp(stack[stack_size]->name, word) == 0) {
-            stack[stack_size] = NULL;
-            stack_size--;
-            i--;
-          } else {
-            printf("Error: missing %s tag\n", stack[stack_size]->name);
-            return 0;
-          }
-        }
-        // открывающийся тег
-      } else if ((binsearch(word, keywords, NKEYS)) >= 0) {
-        root = addnode(root, word);
-        stack[i] = root;
-        tags_stack[m] = root;
-        stack_size = i;
-        i++;
-        m++;
-        // Yазвание класса
-      } else if (strcmp("class", word) == 0) {
-        while (getword(word) != '>') {
-          if (isalpha(word[0])) {
-            stack[stack_size]->classname = my_strdup(word);
-            break;
-          }
-        }
-        //стили
-      } else if (strcmp("style", word) == 0) {
-        while (getword(word) != '"') ;
-        while (getword(word) != '"') {
-          if (strcmp("height", word) == 0) {
-            while (getword(word) != ';') {
-              if (isalnum(word[0])) {
-                stack[stack_size]->css->height = atoi(word);
-              }
-            }
-          } else if (strcmp("width", word) == 0){
-            while (getword(word) != ';') {
-              if (isalnum(word[0])) {
-                stack[stack_size]->css->width = atoi(word);
-              }
-            }
-          }
-        }
-      }
-    }
-
-
-    for (k=0; k<i; k++) {
-      printf("Error: missing %s tag\n", stack[k]->name);
-    }
-
     // отрисовка квадрата
-    form_width = form_height = 50;
-    x = y = 370;
-    drawdiv(x, y, form_height, form_width);
+    drawdiv(x, y, 50, 50);
+    
 
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
               kWindowHeight);
