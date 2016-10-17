@@ -42,6 +42,12 @@ struct stylenode {
   int height;
   int width;
   int bg;
+  int margintop;
+  int marginbottom;
+  int marginleft;
+  int marginright;
+  int x;
+  int y;
 };
 
 struct tnode {
@@ -65,7 +71,7 @@ int binsearch(char *word, char *keywords[], int n);
 char *my_strdup(char *s);
 struct tnode *talloc(void);
 struct stylenode *salloc(void);
-void drawdiv(int x, int y, int height, int width);
+void drawdiv(int x, int y, int height, int width, int bg);
 
 
 
@@ -86,6 +92,7 @@ int main(int argc, char **argv) {
 
   int x = 0;
   int y = 0;
+  int body_x, body_y;
   int form_width = 0;
   int form_height = 0;
 
@@ -98,6 +105,7 @@ int main(int argc, char **argv) {
   char value[MAXLEN];
 
   int k, l, c, n;
+  int index; // for margin, padding
   int i = 0;
   int tags_num = 0;
 
@@ -186,6 +194,31 @@ int main(int argc, char **argv) {
               stack[stack_size]->css->width = atoi(word);
             }
           }
+        } else if (strcmp("background", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->bg = (int)strtol(word, NULL, 16);
+            }
+          }
+        } else if (strcmp("margin", word) == 0){
+          index = 0;
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              if (index == 0) {
+                stack[stack_size]->css->margintop = atoi(word);
+                index++;
+              } else if (index == 1) {
+                stack[stack_size]->css->marginright = atoi(word);
+                index++;
+              } else if (index == 2) {
+                stack[stack_size]->css->marginbottom = atoi(word);
+                index++;
+              } else if (index == 3) {
+                stack[stack_size]->css->marginleft = atoi(word);
+                break;
+              }
+            }
+          }
         }
       }
     }
@@ -197,16 +230,49 @@ int main(int argc, char **argv) {
   }
 
 
+  x = y = body_x = body_y = 0;
+  // draw html elements
   for (k=0; k<tags_num; k++) {
-    if (tags_stack[k]->css->height)  {
-      form_height = tags_stack[k]->css->height;
+    if (tags_stack[k]->parent) {
+      x = tags_stack[k]->parent->css->x;
+      y = tags_stack[k]->parent->css->y;
+    } else {
+      x = body_x;
+      y = body_y;
     }
-    if (tags_stack[k]->css->width)  {
+    if (tags_stack[k]->css->height && tags_stack[k]->css->width)  {
+      // margin-top
+      if (tags_stack[k]->css->margintop) {
+        y += tags_stack[k]->css->margintop;
+      }
+      // coordinates x y
+      tags_stack[k]->css->y = y;
+      tags_stack[k]->css->x = x;
+      form_height = tags_stack[k]->css->height;
       form_width = tags_stack[k]->css->width;
+
+      drawdiv(x, y, form_height, form_width, tags_stack[k]->css->bg);
+      y += form_height ;
+      // margin-bottom
+      if (tags_stack[k]->css->marginbottom) {
+        y += tags_stack[k]->css->marginbottom;
+      }
+    }
+    if (!tags_stack[k]->parent) {
+      // координаты точки 'потока'
+      body_x = x;
+      body_y = y;
+    } else {
+      tags_stack[k]->parent->css->x = x;
+      tags_stack[k]->parent->css->y = y;
+      if (tags_stack[k]->parent->css->y > tags_stack[k]->parent->css->height) {
+        tags_stack[k]->parent->css->height = tags_stack[k]->parent->css->y;
+
+      }
     }
   }
 
-  x = y = 10;
+  
   gRunning = 1;
   while (gRunning) {
     // Process events
@@ -223,10 +289,6 @@ int main(int argc, char **argv) {
       }
     }
 
-    // отрисовка квадрата
-    drawdiv(x, y, 50, 50);
-    
-
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
               kWindowHeight);
 
@@ -238,7 +300,7 @@ int main(int argc, char **argv) {
 }
 
 
-void drawdiv(int x, int y, int height, int width) {
+void drawdiv(int x, int y, int height, int width, int bg) {
   uint32_t *pixel_data = (uint32_t *)gXImage->data;
   int v, z;
 
@@ -246,7 +308,7 @@ void drawdiv(int x, int y, int height, int width) {
   pixel_data = pixel_data + (kWindowWidth * y) + x;
   for (v = 0; v < height; v++) {
     for (z = 0; z < width; z++) {
-      *(pixel_data + z) = RED;
+      *(pixel_data + z) = bg;
     }
     pixel_data = pixel_data + kWindowWidth;
   }
@@ -261,6 +323,16 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->parent = stack[stack_size];
   p->classname = NULL;
   p->css = salloc();
+  p->css->height = 0;
+  p->css->width = 0;
+  p->css->bg = 0;
+  p->css->x = 0;
+  p->css->y = 0;
+  p->css->margintop = 0;
+  p->css->marginbottom = 0;
+  p->css->marginleft = 0;
+  p->css->marginright = 0;
+  // p->css->bg = 0xFFFFFF;
   return p;
 }
 
