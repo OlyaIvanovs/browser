@@ -92,13 +92,15 @@ int main(int argc, char **argv) {
 
   int x = 0;
   int y = 0;
-  int body_x, body_y;
+  int body_x, body_y, prev_x, prev_y;
   int form_width = 0;
   int form_height = 0;
 
 
   // для парсинга
   struct tnode *root;
+  struct tnode *a;
+  struct tnode *b;
   char word[MAXWORD];
   char styleline[MAXLEN];
   char param[MAXLEN];
@@ -106,6 +108,7 @@ int main(int argc, char **argv) {
 
   int k, l, c, n;
   int index; // for margin, padding
+  int parent_exist;
   int i = 0;
   int tags_num = 0;
 
@@ -240,6 +243,8 @@ int main(int argc, char **argv) {
       x = body_x;
       y = body_y;
     }
+    tags_stack[k]->css->y = y;
+    tags_stack[k]->css->x = x;
     if (tags_stack[k]->css->height && tags_stack[k]->css->width)  {
       // margin-top
       if (tags_stack[k]->css->margintop) {
@@ -247,10 +252,8 @@ int main(int argc, char **argv) {
       }
       // coordinates x y
       tags_stack[k]->css->y = y;
-      tags_stack[k]->css->x = x;
       form_height = tags_stack[k]->css->height;
       form_width = tags_stack[k]->css->width;
-
       drawdiv(x, y, form_height, form_width, tags_stack[k]->css->bg);
       y += form_height ;
       // margin-bottom
@@ -263,12 +266,44 @@ int main(int argc, char **argv) {
       body_x = x;
       body_y = y;
     } else {
-      tags_stack[k]->parent->css->x = x;
-      tags_stack[k]->parent->css->y = y;
-      if (tags_stack[k]->parent->css->y > tags_stack[k]->parent->css->height) {
-        tags_stack[k]->parent->css->height = tags_stack[k]->parent->css->y;
+      parent_exist = 1;
+      a = tags_stack[k];
+      while (parent_exist) {
+        prev_x = a->parent->css->x;
+        prev_y = a->parent->css->y;
+        a->parent->css->x = x;
+        a->parent->css->y = y;
 
-      }
+        if (a->parent->css->height == 0) {
+          int u = 0;
+          struct tnode *st[MAXLEN];
+          b = a->parent;
+          st[u] = b;
+          u++;
+          while (b->parent) {
+            st[u] = b->parent;
+            b = b->parent;
+            u++;
+          }
+          int ll;
+          for (ll=u; ll=0; ll--) {
+            printf("%s\n", st[ll]->classname);
+            // if(st[ll]->css->height == 0) {
+            //   printf("llll\n");
+            //   // drawdiv(prev_x, prev_y, y-st[ll]->css->y, st[ll]->css->width, st[ll]->css->bg);
+            // }
+          }
+          // drawdiv(prev_x, prev_y, y-prev_y, a->parent->css->width, a->parent->css->bg);
+          // drawdiv(a->css->x, a->css->y, a->css->height, a->css->width, a->css->bg);
+        } else {
+          parent_exist = 0;
+        }
+        if (a->parent->parent) {
+          a = a->parent;
+        } else {
+          parent_exist = 0;
+        }
+      } 
     }
   }
 

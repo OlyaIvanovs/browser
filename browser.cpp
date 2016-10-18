@@ -113,3 +113,31 @@ void drawdiv(int x, int y, int height, int width) {
     pixel_data = pixel_data + kWindowWidth;
   }
 }
+
+
+
+<div class="hoverBox" 
+    style="height: 100; width: 200; background: 0x113F89; margin: 20 20 20 20;">
+    <div class="obscuresLayer" style="height: 20; width: 20; background: 0xFF0000; margin: 20 20 20 20;">&nbsp;</div>
+    <div class="obscuresLayer" style="height: 40; width: 40; background: 0xFFFF00; margin: 20 20 20 20;">&nbsp;</div>
+    <a class="contentelem912 hoverImg" href="/gallery/smile/#0559">
+        <span class="appeared">&nbsp;</span>
+        <span class="contentelem9121">Ласка, Дзержинск</span>
+    </a>
+    <a class="contentelem913 hoverImg" href="/gallery/smile/#0559">
+        <span class="appeared">&nbsp;</span>
+        <span class="contentelem9131">Очаровательная улыбка</span>
+    </a>
+</div>
+
+<div class="hoverBox" style="height: 100; width: 200; background: 0x11895b; margin: 20 20 20 20;" hoverBox_href="/gallery/trip/#S0123">
+    <div class="obscuresLayer" style="height: 20; width: 20; background: 0xeaa327; margin: 20 20 20 20;">&nbsp;</div>
+    <a class="contentelem912 hoverImg" href="/gallery/trip/#S0123">
+        <span class="appeared">&nbsp;</span>
+        <span class="contentelem9121">Лёля, Краснодон</span>
+    </a>
+    <a class="contentelem913 hoverImg" href="/gallery/trip/#S0123">
+        <span class="appeared">&nbsp;</span>
+        <span class="contentelem9131">Отпуск! Отпуск!</span>
+    </a>
+</div>
