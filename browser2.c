@@ -101,6 +101,7 @@ int main(int argc, char **argv) {
   struct tnode *root;
   struct tnode *a;
   struct tnode *b;
+  struct tnode *st[MAXLEN];
   char word[MAXWORD];
   char styleline[MAXLEN];
   char param[MAXLEN];
@@ -110,6 +111,7 @@ int main(int argc, char **argv) {
   int index; // for margin, padding
   int parent_exist;
   int i = 0;
+  int u = 0;
   int tags_num = 0;
 
   root = NULL;
@@ -239,12 +241,13 @@ int main(int argc, char **argv) {
     if (tags_stack[k]->parent) {
       x = tags_stack[k]->parent->css->x;
       y = tags_stack[k]->parent->css->y;
-    } else {
-      x = body_x;
-      y = body_y;
-    }
+    } 
+    
     tags_stack[k]->css->y = y;
     tags_stack[k]->css->x = x;
+
+
+    // отрисовка div с известными размерами: ширина и длина
     if (tags_stack[k]->css->height && tags_stack[k]->css->width)  {
       // margin-top
       if (tags_stack[k]->css->margintop) {
@@ -261,49 +264,42 @@ int main(int argc, char **argv) {
         y += tags_stack[k]->css->marginbottom;
       }
     }
+
+
+    // дорисовка "родителей" diva
     if (!tags_stack[k]->parent) {
       // координаты точки 'потока'
       body_x = x;
       body_y = y;
     } else {
-      parent_exist = 1;
-      a = tags_stack[k];
-      while (parent_exist) {
-        prev_x = a->parent->css->x;
-        prev_y = a->parent->css->y;
-        a->parent->css->x = x;
-        a->parent->css->y = y;
+      a  = tags_stack[k];
+      //старые координаты (x, y)  родителя
+      prev_x = a->parent->css->x;
+      prev_y = a->parent->css->y;
+      a->parent->css->x = x;
+      a->parent->css->y = y;
 
-        if (a->parent->css->height == 0) {
-          int u = 0;
-          struct tnode *st[MAXLEN];
-          b = a->parent;
-          st[u] = b;
-          u++;
-          while (b->parent) {
-            st[u] = b->parent;
-            b = b->parent;
-            u++;
-          }
-          int ll;
-          for (ll=u; ll=0; ll--) {
-            printf("%s\n", st[ll]->classname);
-            // if(st[ll]->css->height == 0) {
-            //   printf("llll\n");
-            //   // drawdiv(prev_x, prev_y, y-st[ll]->css->y, st[ll]->css->width, st[ll]->css->bg);
-            // }
-          }
-          // drawdiv(prev_x, prev_y, y-prev_y, a->parent->css->width, a->parent->css->bg);
-          // drawdiv(a->css->x, a->css->y, a->css->height, a->css->width, a->css->bg);
-        } else {
-          parent_exist = 0;
+      if (a->parent->css->height == 0) {
+        // находим всех родителей и перерисовываем их
+        u = 0;
+        b = a->parent;
+        st[u] = b;
+        while (b->parent) {
+          st[++u] = b->parent;
+          b = b->parent;
         }
-        if (a->parent->parent) {
-          a = a->parent;
-        } else {
-          parent_exist = 0;
+
+        int ll;
+        for (ll=u; ll>=0; ll--) {
+          if(st[ll]->css->height == 0) {
+            drawdiv(prev_x, prev_y, y-prev_y, st[ll]->css->width, st[ll]->css->bg);
+            st[ll]->css->x = x;
+            st[ll]->css->y = y;
+          }
         }
-      } 
+        // отрисовка элемента
+        drawdiv(a->css->x, a->css->y, a->css->height, a->css->width, a->css->bg);
+      }
     }
   }
 
