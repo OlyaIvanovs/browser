@@ -40,7 +40,11 @@ int bufp = 0;
 
 struct stylenode {
   int height;
-  int width;
+  // int width;
+  union {
+   int val;
+   char *part;
+   } width;
   int bg;
   int margintop;
   int marginbottom;
@@ -196,7 +200,7 @@ int main(int argc, char **argv) {
         } else if (strcmp("width", word) == 0){
           while (getword(word) != ';') {
             if (isalnum(word[0])) {
-              stack[stack_size]->css->width = atoi(word);
+              stack[stack_size]->css->width.val = atoi(word);
             }
           }
         } else if (strcmp("background", word) == 0){
@@ -246,9 +250,17 @@ int main(int argc, char **argv) {
     tags_stack[k]->css->y = y;
     tags_stack[k]->css->x = x;
 
+    // если ширина не указана, растяшиваем блок на ширину родителя
+    if (tags_stack[k]->css->width.val == 0) {
+       if (tags_stack[k]->parent) {
+        tags_stack[k]->css->width.val = tags_stack[k]->parent->css->width.val;
+       } else {
+        tags_stack[k]->css->width.val = kWindowWidth;
+       }
+    }
 
     // отрисовка div с известными размерами: ширина и длина
-    if (tags_stack[k]->css->height && tags_stack[k]->css->width)  {
+    if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {
       // margin-top
       if (tags_stack[k]->css->margintop) {
         y += tags_stack[k]->css->margintop;
@@ -256,7 +268,7 @@ int main(int argc, char **argv) {
       // coordinates x y
       tags_stack[k]->css->y = y;
       form_height = tags_stack[k]->css->height;
-      form_width = tags_stack[k]->css->width;
+      form_width = tags_stack[k]->css->width.val;
       drawdiv(x, y, form_height, form_width, tags_stack[k]->css->bg);
       y += form_height ;
       // margin-bottom
@@ -292,13 +304,13 @@ int main(int argc, char **argv) {
         int ll;
         for (ll=u; ll>=0; ll--) {
           if(st[ll]->css->height == 0) {
-            drawdiv(prev_x, prev_y, y-prev_y, st[ll]->css->width, st[ll]->css->bg);
+            drawdiv(prev_x, prev_y, y-prev_y, st[ll]->css->width.val, st[ll]->css->bg);
             st[ll]->css->x = x;
             st[ll]->css->y = y;
           }
         }
         // отрисовка элемента
-        drawdiv(a->css->x, a->css->y, a->css->height, a->css->width, a->css->bg);
+        drawdiv(a->css->x, a->css->y, a->css->height, a->css->width.val, a->css->bg);
       }
     }
   }
@@ -355,7 +367,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->classname = NULL;
   p->css = salloc();
   p->css->height = 0;
-  p->css->width = 0;
+  p->css->width.val = 0;
   p->css->bg = 0;
   p->css->x = 0;
   p->css->y = 0;
@@ -369,7 +381,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
 
 struct stylenode *addstyle(struct stylenode *p) {
   p->height = 0;
-  p->width = 0;
+  p->width.val = 0;
   p->bg = 0;
   return p;
 }
