@@ -50,6 +50,10 @@ struct stylenode {
   int marginbottom;
   int marginleft;
   int marginright;
+  int paddingtop;
+  int paddingbottom;
+  int paddingleft;
+  int paddingright;
   int x;
   int y;
 };
@@ -228,6 +232,25 @@ int main(int argc, char **argv) {
               }
             }
           }
+        } else if (strcmp("padding", word) == 0){
+          index = 0;
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              if (index == 0) {
+                stack[stack_size]->css->paddingtop = atoi(word);
+                index++;
+              } else if (index == 1) {
+                stack[stack_size]->css->paddingright = atoi(word);
+                index++;
+              } else if (index == 2) {
+                stack[stack_size]->css->paddingbottom = atoi(word);
+                index++;
+              } else if (index == 3) {
+                stack[stack_size]->css->paddingleft = atoi(word);
+                break;
+              }
+            }
+          }
         }
       }
     }
@@ -247,9 +270,12 @@ int main(int argc, char **argv) {
       y = tags_stack[k]->parent->css->y;
     } 
     
-    tags_stack[k]->css->y = y;
     tags_stack[k]->css->x = x;
-
+    tags_stack[k]->css->y = y;
+    // если ест padding у родителя делаем отступ
+    if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft) {
+        tags_stack[k]->css->x += tags_stack[k]->parent->css->paddingleft;
+    } 
     // если ширина не указана, растяшиваем блок на ширину родителя
     if (tags_stack[k]->css->width.val == 0) {
        if (tags_stack[k]->parent) {
@@ -258,13 +284,23 @@ int main(int argc, char **argv) {
         tags_stack[k]->css->width.val = kWindowWidth;
        }
     }
+    // изменяем ширину если есть padding
+    if (tags_stack[k]->parent && (tags_stack[k]->parent->css->paddingleft || tags_stack[k]->parent->css->paddingright)) {
+        tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
+    }
+    // если у родителя элемента есть padding верхний, отрисоваваем родителя элемента на высоту padding
+    if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingtop) {
+        drawdiv(x, y, tags_stack[k]->parent->css->paddingtop,tags_stack[k]->parent->css->width.val, tags_stack[k]->parent->css->bg);
+        tags_stack[k]->css->y += tags_stack[k]->parent->css->paddingtop; 
+        y += tags_stack[k]->parent->css->paddingtop;
+        // обнуляем paddingб чтобы не изменялись координаты остальных детей блока с padding
+        tags_stack[k]->parent->css->paddingtop = 0;
+    }
+
+
 
     // отрисовка div с известными размерами: ширина и длина
     if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {
-      // margin-top
-      if (tags_stack[k]->css->margintop) {
-        y += tags_stack[k]->css->margintop;
-      }
       // coordinates x y
       tags_stack[k]->css->y = y;
       form_height = tags_stack[k]->css->height;
@@ -276,6 +312,8 @@ int main(int argc, char **argv) {
         y += tags_stack[k]->css->marginbottom;
       }
     }
+
+
 
 
     // дорисовка "родителей" diva
@@ -375,6 +413,10 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->marginbottom = 0;
   p->css->marginleft = 0;
   p->css->marginright = 0;
+  p->css->paddingtop = 0;
+  p->css->paddingbottom = 0;
+  p->css->paddingleft = 0;
+  p->css->paddingright = 0;
   // p->css->bg = 0xFFFFFF;
   return p;
 }
