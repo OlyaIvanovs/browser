@@ -272,7 +272,8 @@ int main(int argc, char **argv) {
     
     tags_stack[k]->css->x = x;
     tags_stack[k]->css->y = y;
-    // если ест padding у родителя делаем отступ
+
+    // если ест padding у родителя делаем отступ для элемента
     if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft) {
         tags_stack[k]->css->x += tags_stack[k]->parent->css->paddingleft;
     } 
@@ -302,19 +303,15 @@ int main(int argc, char **argv) {
     // отрисовка div с известными размерами: ширина и длина
     if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {
       // coordinates x y
-      tags_stack[k]->css->y = y;
       form_height = tags_stack[k]->css->height;
       form_width = tags_stack[k]->css->width.val;
-      drawdiv(x, y, form_height, form_width, tags_stack[k]->css->bg);
+      drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, form_height, form_width, tags_stack[k]->css->bg);
       y += form_height ;
       // margin-bottom
       if (tags_stack[k]->css->marginbottom) {
         y += tags_stack[k]->css->marginbottom;
       }
     }
-
-
-
 
     // дорисовка "родителей" diva
     if (!tags_stack[k]->parent) {
@@ -326,7 +323,7 @@ int main(int argc, char **argv) {
       //старые координаты (x, y)  родителя
       prev_x = a->parent->css->x;
       prev_y = a->parent->css->y;
-      a->parent->css->x = x;
+      // a->parent->css->x = x;
       a->parent->css->y = y;
 
       if (a->parent->css->height == 0) {
@@ -342,8 +339,7 @@ int main(int argc, char **argv) {
         int ll;
         for (ll=u; ll>=0; ll--) {
           if(st[ll]->css->height == 0) {
-            drawdiv(prev_x, prev_y, y-prev_y, st[ll]->css->width.val, st[ll]->css->bg);
-            st[ll]->css->x = x;
+            drawdiv(st[ll]->css->x, prev_y, y-prev_y, st[ll]->css->width.val, st[ll]->css->bg);
             st[ll]->css->y = y;
           }
         }
