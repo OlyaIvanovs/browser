@@ -55,6 +55,7 @@ struct stylenode {
   int paddingbottom;
   int paddingleft;
   int paddingright;
+  int paddingbottomline;
   int x;
   int y;
 };
@@ -290,21 +291,12 @@ int main(int argc, char **argv) {
     if (tags_stack[k]->parent && (tags_stack[k]->parent->css->paddingleft || tags_stack[k]->parent->css->paddingright)) {
         tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
     }
-    // если у родителя элемента есть padding верхний, отрисоваваем родителя элемента на высоту padding
-    // if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingtop) {
-    //   drawdiv(x, y, tags_stack[k]->parent->css->paddingtop,tags_stack[k]->parent->css->width.val, tags_stack[k]->parent->css->bg);
-    //   tags_stack[k]->css->y += tags_stack[k]->parent->css->paddingtop; 
-    //   y += tags_stack[k]->parent->css->paddingtop;
-    //   // обнуляем paddingб чтобы не изменялись координаты остальных детей блока с padding
-    //   tags_stack[k]->parent->css->paddingtop = 0;
-    // } 
+    //paddingtop
     if (tags_stack[k]->css->paddingtop) {
       drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingtop,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
       tags_stack[k]->css->y += tags_stack[k]->css->paddingtop;
       y += tags_stack[k]->css->paddingtop;
     }
-
-
 
     // отрисовка div с известными размерами: ширина и длина
     if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {
@@ -313,10 +305,15 @@ int main(int argc, char **argv) {
       form_width = tags_stack[k]->css->width.val;
       drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, form_height, form_width, tags_stack[k]->css->bg);
       y += form_height ;
-      // margin-bottom
-      if (tags_stack[k]->css->marginbottom) {
-        y += tags_stack[k]->css->marginbottom;
-      }
+      // // margin-bottom
+      // if (tags_stack[k]->css->marginbottom) {
+      //   y += tags_stack[k]->css->marginbottom;
+      // }
+    }
+    //padding-bottom
+    if (tags_stack[k]->css->paddingbottom) {
+      drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingbottom,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+      y += tags_stack[k]->css->paddingbottom;
     }
 
     // дорисовка "родителей" diva
@@ -342,19 +339,28 @@ int main(int argc, char **argv) {
           b = b->parent;
         }
 
-        int ll;
-        for (ll=u; ll>=0; ll--) {
-          if(st[ll]->css->height == 0) {
-            drawdiv(st[ll]->css->x, prev_y, y-prev_y, st[ll]->css->width.val, st[ll]->css->bg);
-            st[ll]->css->y = y;
+        int num_elems;
+        int paddingbottomheight = 0;
+        //paddingbottom
+        for (num_elems=0; num_elems<=u; num_elems++) {
+          if(st[num_elems]->css->height == 0) {
+            paddingbottomheight += st[num_elems]->css->paddingbottom;
+            st[num_elems]->css->paddingbottomline = paddingbottomheight;
+          }
+        }
+
+        for (num_elems=u; num_elems>=0; num_elems--) {
+          if(st[num_elems]->css->height == 0) {
+            drawdiv(st[num_elems]->css->x, prev_y, y-prev_y, st[num_elems]->css->width.val, st[num_elems]->css->bg);
+            st[num_elems]->css->y = y;
+            drawdiv(st[num_elems]->css->x, st[num_elems]->css->y, st[num_elems]->css->paddingbottomline ,st[num_elems]->css->width.val, st[num_elems]->css->bg);
+            if (st[num_elems]->parent) {
+              st[num_elems]->parent->css->y += st[num_elems]->css->paddingbottomline;
+            }
           }
         }
         // отрисовка элемента
-        if (a->css->paddingtop) {
-          drawdiv(a->css->x, a->css->y - a->css->paddingtop, a->css->height + a->css->paddingtop, a->css->width.val, a->css->bg);
-        } else {
-          drawdiv(a->css->x, a->css->y, a->css->height, a->css->width.val, a->css->bg);
-        }
+        drawdiv(a->css->x, a->css->y - a->css->paddingtop, a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);     
       }
     }
   }
