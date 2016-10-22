@@ -28,6 +28,7 @@ static int stack_size;
 #define MAXWORD 100
 #define BUFSIZE 100
 #define RED 0xFF0000
+#define GREEN 0x378F1A
 #define ANSI_COLOR_RED "\x1b[31m"
 #define ANSI_COLOR_GREEN "\x1b[32m"
 #define ANSI_COLOR_YELLOW "\x1b[33m"
@@ -290,12 +291,17 @@ int main(int argc, char **argv) {
         tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
     }
     // если у родителя элемента есть padding верхний, отрисоваваем родителя элемента на высоту padding
-    if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingtop) {
-        drawdiv(x, y, tags_stack[k]->parent->css->paddingtop,tags_stack[k]->parent->css->width.val, tags_stack[k]->parent->css->bg);
-        tags_stack[k]->css->y += tags_stack[k]->parent->css->paddingtop; 
-        y += tags_stack[k]->parent->css->paddingtop;
-        // обнуляем paddingб чтобы не изменялись координаты остальных детей блока с padding
-        tags_stack[k]->parent->css->paddingtop = 0;
+    // if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingtop) {
+    //   drawdiv(x, y, tags_stack[k]->parent->css->paddingtop,tags_stack[k]->parent->css->width.val, tags_stack[k]->parent->css->bg);
+    //   tags_stack[k]->css->y += tags_stack[k]->parent->css->paddingtop; 
+    //   y += tags_stack[k]->parent->css->paddingtop;
+    //   // обнуляем paddingб чтобы не изменялись координаты остальных детей блока с padding
+    //   tags_stack[k]->parent->css->paddingtop = 0;
+    // } 
+    if (tags_stack[k]->css->paddingtop) {
+      drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingtop,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+      tags_stack[k]->css->y += tags_stack[k]->css->paddingtop;
+      y += tags_stack[k]->css->paddingtop;
     }
 
 
@@ -344,7 +350,11 @@ int main(int argc, char **argv) {
           }
         }
         // отрисовка элемента
-        drawdiv(a->css->x, a->css->y, a->css->height, a->css->width.val, a->css->bg);
+        if (a->css->paddingtop) {
+          drawdiv(a->css->x, a->css->y - a->css->paddingtop, a->css->height + a->css->paddingtop, a->css->width.val, a->css->bg);
+        } else {
+          drawdiv(a->css->x, a->css->y, a->css->height, a->css->width.val, a->css->bg);
+        }
       }
     }
   }
