@@ -289,19 +289,19 @@ int main(int argc, char **argv) {
         tags_stack[k]->css->width.val = tags_stack[k]->parent->css->width.val;
         // изменяем ширину если есть padding
         if (tags_stack[k]->parent->css->paddingleft || tags_stack[k]->parent->css->paddingright) {
-          if (tags_stack[k]->css->width.val < tags_stack[k]->parent->css->width.val) {
-            tags_stack[k]->parent->css->width.val += (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
-          } else {
             tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
-          }
-        } 
-
+        }
         // изменяем ширину если есть margin
         if (tags_stack[k]->css->marginleft || tags_stack[k]->css->marginright) {
-            tags_stack[k]->css->width.val -= (tags_stack[k]->css->marginleft + tags_stack[k]->css->paddingright);
+            tags_stack[k]->css->width.val -= (tags_stack[k]->css->marginleft + tags_stack[k]->css->marginright);
         }
       } else {
         tags_stack[k]->css->width.val = kWindowWidth;
+      }
+    } else if (tags_stack[k]->parent && tags_stack[k]->css->width.val < tags_stack[k]->parent->css->width.val) {
+      if (tags_stack[k]->css->paddingleft || tags_stack[k]->css->paddingright) {
+        printf("%d\n", tags_stack[k]->css->width.val);
+        tags_stack[k]->css->width.val += (tags_stack[k]->css->paddingleft + tags_stack[k]->css->paddingright);
       }
     }
     
