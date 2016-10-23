@@ -279,18 +279,32 @@ int main(int argc, char **argv) {
     if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft) {
         tags_stack[k]->css->x += tags_stack[k]->parent->css->paddingleft;
     } 
+    // если margin делаем отступ для элемента
+    if (tags_stack[k]->css->marginleft) {
+        tags_stack[k]->css->x += tags_stack[k]->css->marginleft;
+    } 
     // если ширина не указана, растяшиваем блок на ширину родителя
     if (tags_stack[k]->css->width.val == 0) {
        if (tags_stack[k]->parent) {
         tags_stack[k]->css->width.val = tags_stack[k]->parent->css->width.val;
-       } else {
+        // изменяем ширину если есть padding
+        if (tags_stack[k]->parent->css->paddingleft || tags_stack[k]->parent->css->paddingright) {
+          if (tags_stack[k]->css->width.val < tags_stack[k]->parent->css->width.val) {
+            tags_stack[k]->parent->css->width.val += (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
+          } else {
+            tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
+          }
+        } 
+
+        // изменяем ширину если есть margin
+        if (tags_stack[k]->css->marginleft || tags_stack[k]->css->marginright) {
+            tags_stack[k]->css->width.val -= (tags_stack[k]->css->marginleft + tags_stack[k]->css->paddingright);
+        }
+      } else {
         tags_stack[k]->css->width.val = kWindowWidth;
-       }
+      }
     }
-    // изменяем ширину если есть padding
-    if (tags_stack[k]->parent && (tags_stack[k]->parent->css->paddingleft || tags_stack[k]->parent->css->paddingright)) {
-        tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
-    }
+    
     //paddingtop
     if (tags_stack[k]->css->paddingtop) {
       drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingtop,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
@@ -303,12 +317,17 @@ int main(int argc, char **argv) {
       // coordinates x y
       form_height = tags_stack[k]->css->height;
       form_width = tags_stack[k]->css->width.val;
+      // margin-top
+      if (tags_stack[k]->css->margintop) {
+        y += tags_stack[k]->css->margintop;
+        tags_stack[k]->css->y += tags_stack[k]->css->margintop;
+      }
       drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, form_height, form_width, tags_stack[k]->css->bg);
       y += form_height ;
-      // // margin-bottom
-      // if (tags_stack[k]->css->marginbottom) {
-      //   y += tags_stack[k]->css->marginbottom;
-      // }
+      // margin-bottom
+      if (tags_stack[k]->css->marginbottom) {
+        y += tags_stack[k]->css->marginbottom;
+      }
     }
     //padding-bottom
     if (tags_stack[k]->css->paddingbottom) {
