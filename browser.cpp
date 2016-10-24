@@ -116,28 +116,24 @@ void drawdiv(int x, int y, int height, int width) {
 
 
 
-<div class="hoverBox" 
-    style="height: 100; width: 200; background: 0x113F89; margin: 20 20 20 20;">
-    <div class="obscuresLayer" style="height: 20; width: 20; background: 0xFF0000; margin: 20 20 20 20;">&nbsp;</div>
-    <div class="obscuresLayer" style="height: 40; width: 40; background: 0xFFFF00; margin: 20 20 20 20;">&nbsp;</div>
-    <a class="contentelem912 hoverImg" href="/gallery/smile/#0559">
-        <span class="appeared">&nbsp;</span>
-        <span class="contentelem9121">Ласка, Дзержинск</span>
-    </a>
-    <a class="contentelem913 hoverImg" href="/gallery/smile/#0559">
-        <span class="appeared">&nbsp;</span>
-        <span class="contentelem9131">Очаровательная улыбка</span>
-    </a>
+<div class="hoverBox" style="background: #dee256; width: 600; padding: 20 20 20 20;">
+    <div class="obscuresLayer12" style="width: 500; background: #4286f4; padding: 30 30 30 30; margin: 20 20 20 20;">
+        <div class="obscuresLayer123" style="width: 400; background: #42f450; padding: 30 30 30 30;">
+            <div class="obscuresLayer1234567" style="width: 300; background: #2B49F0; padding: 20 20 20 20;">
+                <div class="obscuresLayer12345678" style="height: 60; background: #F0D22B; margin: 20 20 20 20;"></div>
+                <div class="obscuresLayer123456789" style="height: 60; background: #E36A14; margin: 20 20 20 20;"></div>
+                <div class="obscuresLayer1234567890" style="height: 60; background: #F02BAC; margin: 10 10 10 10;"></div>
+            </div>
+            <div class="obscuresLayer1234" style="width: 300; height: 80; background: #1A728F; padding: 20 20 20 20; margin: 20 20 20 20;">
+                <div class="obscuresLayer12345" style="height: 30; background: #E36A14;"></div>
+                <div class="obscuresLayer123456" style="height: 30; background: #F02BAC;"></div>
+            </div>
+        </div>
+        <div class="obscuresLayer12345678901" style="width: 400; background: #F02BAC; padding: 30 30 30 30;">
+            <div class="obscuresLayer12345678902" style="width: 300; height: 160; background: #1A728F; padding: 20 20 20 20;">
+                <div class="obscuresLayer12345678903" style="height: 60; background: #E36A14;"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="hoverBox" style="height: 100; width: 200; background: 0x11895b; margin: 20 20 20 20;" hoverBox_href="/gallery/trip/#S0123">
-    <div class="obscuresLayer" style="height: 20; width: 20; background: 0xeaa327; margin: 20 20 20 20;">&nbsp;</div>
-    <a class="contentelem912 hoverImg" href="/gallery/trip/#S0123">
-        <span class="appeared">&nbsp;</span>
-        <span class="contentelem9121">Лёля, Краснодон</span>
-    </a>
-    <a class="contentelem913 hoverImg" href="/gallery/trip/#S0123">
-        <span class="appeared">&nbsp;</span>
-        <span class="contentelem9131">Отпуск! Отпуск!</span>
-    </a>
-</div>

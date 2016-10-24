@@ -293,14 +293,13 @@ int main(int argc, char **argv) {
         }
         // изменяем ширину если есть margin
         if (tags_stack[k]->css->marginleft || tags_stack[k]->css->marginright) {
-            tags_stack[k]->css->width.val -= (tags_stack[k]->css->marginleft + tags_stack[k]->css->marginright);
+          tags_stack[k]->css->width.val -= (tags_stack[k]->css->marginleft + tags_stack[k]->css->marginright);
         }
       } else {
         tags_stack[k]->css->width.val = kWindowWidth;
       }
-    } else if (tags_stack[k]->parent && tags_stack[k]->css->width.val < tags_stack[k]->parent->css->width.val) {
+    } else if ((tags_stack[k]->parent && tags_stack[k]->css->width.val < tags_stack[k]->parent->css->width.val) || (tags_stack[k]->css->width.val < kWindowWidth)) {
       if (tags_stack[k]->css->paddingleft || tags_stack[k]->css->paddingright) {
-        printf("%d\n", tags_stack[k]->css->width.val);
         tags_stack[k]->css->width.val += (tags_stack[k]->css->paddingleft + tags_stack[k]->css->paddingright);
       }
     }
@@ -312,28 +311,37 @@ int main(int argc, char **argv) {
       y += tags_stack[k]->css->paddingtop;
     }
 
-    // отрисовка div с известными размерами: ширина и длина
+    //margin-top
+    if (tags_stack[k]->css->margintop) {
+        y += tags_stack[k]->css->margintop;
+        tags_stack[k]->css->y += tags_stack[k]->css->margintop;
+      }
+
+    // отрисовка div с известными размерами: высота и ширина
     if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {
       // coordinates x y
       form_height = tags_stack[k]->css->height;
       form_width = tags_stack[k]->css->width.val;
-      // margin-top
-      if (tags_stack[k]->css->margintop) {
-        y += tags_stack[k]->css->margintop;
-        tags_stack[k]->css->y += tags_stack[k]->css->margintop;
-      }
       drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, form_height, form_width, tags_stack[k]->css->bg);
       y += form_height ;
       // margin-bottom
       if (tags_stack[k]->css->marginbottom) {
         y += tags_stack[k]->css->marginbottom;
+        tags_stack[k]->css->y += tags_stack[k]->css->marginbottom;
       }
     }
+
     //padding-bottom
     if (tags_stack[k]->css->paddingbottom) {
       drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingbottom,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
       y += tags_stack[k]->css->paddingbottom;
     }
+
+    //margin-bottom
+    if (tags_stack[k]->css->marginbottom) {
+        y += tags_stack[k]->css->marginbottom;
+        tags_stack[k]->css->y += tags_stack[k]->css->marginbottom;
+      }
 
     // дорисовка "родителей" diva
     if (!tags_stack[k]->parent) {
@@ -360,7 +368,7 @@ int main(int argc, char **argv) {
 
         int num_elems;
         int paddingbottomheight = 0;
-        //paddingbottom
+        //paddingbottom; высота линии, которую дорисовываем внизу элемента paddingbottomheight
         for (num_elems=0; num_elems<=u; num_elems++) {
           if(st[num_elems]->css->height == 0) {
             paddingbottomheight += st[num_elems]->css->paddingbottom;
