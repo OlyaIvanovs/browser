@@ -275,6 +275,10 @@ int main(int argc, char **argv) {
     tags_stack[k]->css->x = x;
     tags_stack[k]->css->y = y;
 
+    if (!tags_stack[k]->css->bg && tags_stack[k]->parent) {
+      tags_stack[k]->css->bg = tags_stack[k]->parent->css->bg;
+    }
+
     // если ест padding у родителя делаем отступ для элемента
     if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft) {
         tags_stack[k]->css->x += tags_stack[k]->parent->css->paddingleft;
@@ -318,15 +322,7 @@ int main(int argc, char **argv) {
       if (k >= 1 && (tags_stack[k]->parent == tags_stack[k-1]->parent) && 
         !tags_stack[k-1]->css->paddingbottom && !tags_stack[k]->css->paddingtop 
         && tags_stack[k-1]->css->marginbottom) {
-        // marg = (tags_stack[k-1]->css->marginbottom >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - tags_stack[k-1]->css->marginbottom); 
-        if (tags_stack[k-1]->css->marginbottom >= tags_stack[k]->css->margintop) {
-          printf("%s\n", tags_stack[k]->classname);
-          printf("%d\n", tags_stack[k]->css->margintop);
-          printf("%d\n", tags_stack[k-1]->css->marginbottom);
-          marg = 0;
-        } else {
-          marg = tags_stack[k]->css->margintop - tags_stack[k-1]->css->marginbottom;
-        }
+        marg = (tags_stack[k-1]->css->marginbottom >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - tags_stack[k-1]->css->marginbottom); 
       } else {
         marg = tags_stack[k]->css->margintop;
       }
