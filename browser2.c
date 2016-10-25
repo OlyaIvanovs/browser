@@ -312,10 +312,27 @@ int main(int argc, char **argv) {
     }
 
     //margin-top
+    int marg;
     if (tags_stack[k]->css->margintop) {
-        y += tags_stack[k]->css->margintop;
-        tags_stack[k]->css->y += tags_stack[k]->css->margintop;
+      //Problem: The margins of adjacent siblings are collapsed 
+      if (k >= 1 && (tags_stack[k]->parent == tags_stack[k-1]->parent) && 
+        !tags_stack[k-1]->css->paddingbottom && !tags_stack[k]->css->paddingtop 
+        && tags_stack[k-1]->css->marginbottom) {
+        // marg = (tags_stack[k-1]->css->marginbottom >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - tags_stack[k-1]->css->marginbottom); 
+        if (tags_stack[k-1]->css->marginbottom >= tags_stack[k]->css->margintop) {
+          printf("%s\n", tags_stack[k]->classname);
+          printf("%d\n", tags_stack[k]->css->margintop);
+          printf("%d\n", tags_stack[k-1]->css->marginbottom);
+          marg = 0;
+        } else {
+          marg = tags_stack[k]->css->margintop - tags_stack[k-1]->css->marginbottom;
+        }
+      } else {
+        marg = tags_stack[k]->css->margintop;
       }
+      y += marg;
+      tags_stack[k]->css->y += marg;
+    }
 
     // отрисовка div с известными размерами: высота и ширина
     if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {
@@ -340,7 +357,6 @@ int main(int argc, char **argv) {
     //margin-bottom
     if (tags_stack[k]->css->marginbottom) {
         y += tags_stack[k]->css->marginbottom;
-        tags_stack[k]->css->y += tags_stack[k]->css->marginbottom;
       }
 
     // дорисовка "родителей" diva
@@ -368,10 +384,13 @@ int main(int argc, char **argv) {
 
         int num_elems;
         int paddingbottomheight = 0;
-        //paddingbottom; высота линии, которую дорисовываем внизу элемента paddingbottomheight
+        //paddingbottom; высота линии, которую дорисовываем внизу элемента paddingbottomheight (padding + marginbottom предыдущего элемента)
         for (num_elems=0; num_elems<=u; num_elems++) {
           if(st[num_elems]->css->height == 0) {
             paddingbottomheight += st[num_elems]->css->paddingbottom;
+            if (num_elems-1 >= 0) {
+              paddingbottomheight += st[num_elems-1]->css->marginbottom;
+            }          
             st[num_elems]->css->paddingbottomline = paddingbottomheight;
           }
         }
