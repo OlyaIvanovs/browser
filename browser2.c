@@ -490,14 +490,20 @@ int getword(char *word) {
   while(isspace(c = getch()))  
     ;
 
-  if ( (c == '<') && (isalpha(c = getch()) || (c == '/'))) {
-    *w++ = c;
-    while (isalnum(c = getch())) {
+  if (c == '<') {
+    if ((isalpha(c = getch()) || (c == '/'))) {
       *w++ = c;
+      while (isalnum(c = getch())) {
+        *w++ = c;
+      }
+      *w = '\0';
+      return word[0];
+    } else if (c == '!' && (c = getch()) == '-' && (c = getch()) == '-') {
+      while ((c = getch()) != '-' && (c = getch()) != '-' && (c = getch()) != '-')
+        ;
     }
-    *w = '\0';
-    return word[0];
-  } 
+  }
+
 
   if (isalnum(c)) {
     *w++ = c;
