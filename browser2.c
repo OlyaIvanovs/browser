@@ -8,6 +8,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 
 static int gRunning;
 // windows parameters
@@ -35,6 +38,27 @@ static int stack_size;
 #define ANSI_COLOR_BLUE "\x1b[34m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
+// textarea parameters
+#define WIDTH 640
+#define HEIGHT 480
+unsigned char image[HEIGHT][WIDTH];
+
+
+// textarea symbols
+void
+draw_bitmap(FT_Bitmap *bitmap, FT_Int x, FT_Int y) {
+  FT_Int i, j, p, q;
+  FT_Int x_max = x + bitmap->width;
+  FT_Int y_max = y + bitmap->rows;
+
+  for (i = x, p = 0; i < x_max; i++, p++) {
+    for (j = y, q = 0; j < y_max; j++, q++) {
+      if (i < 0 || j < 0 || i >= WIDTH || j >= HEIGHT) continue;
+
+      image[j][i] = bitmap->buffer[q * bitmap->width + p];
+    }
+  }
+}
 
 char buf[BUFSIZE];
 int bufp = 0;
@@ -85,6 +109,7 @@ void drawdiv(int x, int y, int height, int width, int bg);
 
 
 
+
 int main(int argc, char **argv) {
   // для отрисовки
   Display *display;
@@ -124,8 +149,68 @@ int main(int argc, char **argv) {
   int u = 0;
   int tags_num = 0;
 
-  root = NULL;
 
+  // for text. FREE TYPE
+  FT_Library library;
+  FT_Face face;
+  FT_GlyphSlot slot;
+  FT_Error error;
+  char *filename;
+  char *text;
+  int target_height;
+  int n1, num_chars;
+
+  filename = argv[1];
+  text = argv[2];
+  num_chars = strlen(text);
+
+  // Errors Freetype
+  error = FT_Init_FreeType(&library);                 /* initialize library */
+  if ( error ) {
+    printf("an error occurred during library initialization");
+  }
+
+  error = FT_New_Face(library, filename, 0, &face);   /* create face object */
+  if ( error == FT_Err_Unknown_File_Format ) {
+    printf("that its font format is unsupported");
+  } else if ( error ) {
+    printf("font file could not be opened or read, or that it is broken");
+  }
+
+  error = FT_Set_Char_Size(face, 20 * 64, 0, 100, 0); /* set character size */
+  if ( error ) {
+    printf("an error occurred during seting character size");
+  }
+
+
+  slot = face->glyph;
+  int metr = 0;
+  int metr_top = 0;
+
+  // картинка для каждой отдельной буквы
+  for ( n1 = 0; n1 < num_chars; n1++ )
+  {
+    /* load glyph image into the slot (erase previous one) */
+
+    error = FT_Load_Char( face, text[n1], FT_LOAD_RENDER );
+    if ( error )
+      continue;                 /* ignore errors */
+
+    draw_bitmap( &slot->bitmap,
+                 slot->bitmap_left + metr,
+                 slot->bitmap_top + metr_top);
+    // каждую следующую букву смещаем на ширину предыдущей * 1.35
+    // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
+    metr += slot->metrics.width/64*1.35;
+    // если строчка в ширину кончилась, перенос на следующую строку
+    if (metr > (WIDTH - slot->metrics.width/64*1.35)) {
+      metr = 0;
+      metr_top += slot->metrics.height/64*1.35;
+    } 
+  }
+
+
+  root = NULL;
 
   // создание окна
   window = XCreateSimpleWindow(display, RootWindow(display, screen), 300, 300,
@@ -136,7 +221,9 @@ int main(int argc, char **argv) {
   XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask |
                                     ButtonPressMask | ButtonReleaseMask |
                                     StructureNotifyMask);
-  XMapRaised(display, window);
+  // XMapRaised(display, window);
+  XMapWindow( display , window );
+  // XMapWindow( mydisplay , sliderbedWindow );
   Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(display, window, &wmDeleteMessage, 1);
 
@@ -187,10 +274,10 @@ int main(int argc, char **argv) {
       tags_num++;
       // Yазвание класса
     } else if (strcmp("class", word) == 0) {
-      while (getword(word) != '>') {
+      while (getword(word) != '"');
+      while (getword(word) != '"') {
         if (isalpha(word[0])) {
           stack[stack_size]->classname = my_strdup(word);
-          break;
         }
       }
       //стили
@@ -230,7 +317,6 @@ int main(int argc, char **argv) {
                 index++;
               } else if (index == 3) {
                 stack[stack_size]->css->marginleft = atoi(word);
-                break;
               }
             }
           }
@@ -249,11 +335,10 @@ int main(int argc, char **argv) {
                 index++;
               } else if (index == 3) {
                 stack[stack_size]->css->paddingleft = atoi(word);
-                break;
               }
             }
           }
-        }
+        } 
       }
     }
   }
@@ -264,7 +349,7 @@ int main(int argc, char **argv) {
   }
 
 
-  x = y = body_x = body_y = 0;
+  x = y = body_x = body_y = 150;
   // draw html elements
   for (k=0; k<tags_num; k++) {
     if (tags_stack[k]->parent) {
@@ -424,6 +509,17 @@ int main(int argc, char **argv) {
       }
     }
 
+    uint32_t *pixel_data = (uint32_t *)gXImage->data;
+    // отрисовка текста
+    for (int v = 0; v < HEIGHT; v++) {
+      for (int z = 0; z < WIDTH; z++) {
+        if (image[v][z] != 0) {
+          *(pixel_data + z) = 0x000000;
+        }
+      }
+      pixel_data = pixel_data + kWindowWidth;
+    }
+
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
               kWindowHeight);
 
@@ -489,7 +585,6 @@ int getword(char *word) {
 
   while(isspace(c = getch()))  
     ;
-
   if (c == '<') {
     if ((isalpha(c = getch()) || (c == '/'))) {
       *w++ = c;
@@ -498,6 +593,7 @@ int getword(char *word) {
       }
       *w = '\0';
       return word[0];
+      //ignore comments
     } else if (c == '!' && (c = getch()) == '-' && (c = getch()) == '-') {
       while ((c = getch()) != '-' && (c = getch()) != '-' && (c = getch()) != '-')
         ;

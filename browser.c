@@ -201,6 +201,7 @@ int main(int argc, char **argv) {
   mouse_click = false;
   form_width = form_height = 50;
   x = y = 370;
+  printf("lalalal\n");
 
   while (gRunning) {
     // Process events
@@ -325,16 +326,6 @@ int main(int argc, char **argv) {
           form_height += 5;
         }
       }
-
-      // отрисовка квадрата
-      // pixel_data = pixel_data + (kWindowWidth * y) + x;
-      // for (int v = 0; v < form_height; v++) {
-      //   for (int z = 0; z < form_width; z++) {
-      //     *(pixel_data + z) = 0xFF0000;
-      //   }
-      //   pixel_data = pixel_data + kWindowWidth;
-      // }
-
 
       // отрисовка текста
       for (int v = 0; v < HEIGHT; v++) {

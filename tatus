@@ -1,0 +1,250 @@
+[1mdiff --git a/browser2.c b/browser2.c[m
+[1mindex 629934d..d6ca8e0 100644[m
+[1m--- a/browser2.c[m
+[1m+++ b/browser2.c[m
+[36m@@ -8,6 +8,9 @@[m
+ #include <ctype.h>[m
+ #include <stdlib.h>[m
+ [m
+[32m+[m[32m#include <ft2build.h>[m
+[32m+[m[32m#include FT_FREETYPE_H[m
+[32m+[m
+ [m
+ static int gRunning;[m
+ // windows parameters[m
+[36m@@ -35,6 +38,27 @@[m [mstatic int stack_size;[m
+ #define ANSI_COLOR_BLUE "\x1b[34m"[m
+ #define ANSI_COLOR_RESET "\x1b[0m"[m
+ [m
+[32m+[m[32m// textarea parameters[m
+[32m+[m[32m#define WIDTH 640[m
+[32m+[m[32m#define HEIGHT 480[m
+[32m+[m[32munsigned char image[HEIGHT][WIDTH];[m
+[32m+[m
+[32m+[m
+[32m+[m[32m// textarea symbols[m
+[32m+[m[32mvoid[m
+[32m+[m[32mdraw_bitmap(FT_Bitmap *bitmap, FT_Int x, FT_Int y) {[m
+[32m+[m[32m  FT_Int i, j, p, q;[m
+[32m+[m[32m  FT_Int x_max = x + bitmap->width;[m
+[32m+[m[32m  FT_Int y_max = y + bitmap->rows;[m
+[32m+[m
+[32m+[m[32m  for (i = x, p = 0; i < x_max; i++, p++) {[m
+[32m+[m[32m    for (j = y, q = 0; j < y_max; j++, q++) {[m
+[32m+[m[32m      if (i < 0 || j < 0 || i >= WIDTH || j >= HEIGHT) continue;[m
+[32m+[m
+[32m+[m[32m      image[j][i] = bitmap->buffer[q * bitmap->width + p];[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+ [m
+ char buf[BUFSIZE];[m
+ int bufp = 0;[m
+[36m@@ -85,6 +109,7 @@[m [mvoid drawdiv(int x, int y, int height, int width, int bg);[m
+ [m
+ [m
+ [m
+[32m+[m
+ int main(int argc, char **argv) {[m
+   // для отрисовки[m
+   Display *display;[m
+[36m@@ -124,8 +149,68 @@[m [mint main(int argc, char **argv) {[m
+   int u = 0;[m
+   int tags_num = 0;[m
+ [m
+[31m-  root = NULL;[m
+ [m
+[32m+[m[32m  // for text. FREE TYPE[m
+[32m+[m[32m  FT_Library library;[m
+[32m+[m[32m  FT_Face face;[m
+[32m+[m[32m  FT_GlyphSlot slot;[m
+[32m+[m[32m  FT_Error error;[m
+[32m+[m[32m  char *filename;[m
+[32m+[m[32m  char *text;[m
+[32m+[m[32m  int target_height;[m
+[32m+[m[32m  int n1, num_chars;[m
+[32m+[m
+[32m+[m[32m  filename = argv[1];[m
+[32m+[m[32m  text = argv[2];[m
+[32m+[m[32m  num_chars = strlen(text);[m
+[32m+[m
+[32m+[m[32m  // Errors Freetype[m
+[32m+[m[32m  error = FT_Init_FreeType(&library);                 /* initialize library */[m
+[32m+[m[32m  if ( error ) {[m
+[32m+[m[32m    printf("an error occurred during library initialization");[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  error = FT_New_Face(library, filename, 0, &face);   /* create face object */[m
+[32m+[m[32m  if ( error == FT_Err_Unknown_File_Format ) {[m
+[32m+[m[32m    printf("that its font format is unsupported");[m
+[32m+[m[32m  } else if ( error ) {[m
+[32m+[m[32m    printf("font file could not be opened or read, or that it is broken");[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  error = FT_Set_Char_Size(face, 20 * 64, 0, 100, 0); /* set character size */[m
+[32m+[m[32m  if ( error ) {[m
+[32m+[m[32m    printf("an error occurred during seting character size");[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m
+[32m+[m[32m  slot = face->glyph;[m
+[32m+[m[32m  int metr = 0;[m
+[32m+[m[32m  int metr_top = 0;[m
+[32m+[m
+[32m+[m[32m  // картинка для каждой отдельной буквы[m
+[32m+[m[32m  for ( n1 = 0; n1 < num_chars; n1++ )[m
+[32m+[m[32m  {[m
+[32m+[m[32m    /* load glyph image into the slot (erase previous one) */[m
+[32m+[m
+[32m+[m[32m    error = FT_Load_Char( face, text[n1], FT_LOAD_RENDER );[m
+[32m+[m[32m    if ( error )[m
+[32m+[m[32m      continue;                 /* ignore errors */[m
+[32m+[m
+[32m+[m[32m    draw_bitmap( &slot->bitmap,[m
+[32m+[m[32m                 slot->bitmap_left + metr,[m
+[32m+[m[32m                 slot->bitmap_top + metr_top);[m
+[32m+[m[32m    // каждую следующую букву смещаем на ширину предыдущей * 1.35[m
+[32m+[m[32m    // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64[m
+[32m+[m[32m    metr += slot->metrics.width/64*1.35;[m
+[32m+[m[32m    // если строчка в ширину кончилась, перенос на следующую строку[m
+[32m+[m[32m    if (metr > (WIDTH - slot->metrics.width/64*1.35)) {[m
+[32m+[m[32m      metr = 0;[m
+[32m+[m[32m      metr_top += slot->metrics.height/64*1.35;[m
+[32m+[m[32m    }[m[41m [m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m
+[32m+[m[32m  root = NULL;[m
+ [m
+   // создание окна[m
+   window = XCreateSimpleWindow(display, RootWindow(display, screen), 300, 300,[m
+[36m@@ -136,7 +221,9 @@[m [mint main(int argc, char **argv) {[m
+   XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask |[m
+                                     ButtonPressMask | ButtonReleaseMask |[m
+                                     StructureNotifyMask);[m
+[31m-  XMapRaised(display, window);[m
+[32m+[m[32m  // XMapRaised(display, window);[m
+[32m+[m[32m  XMapWindow( display , window );[m
+[32m+[m[32m  // XMapWindow( mydisplay , sliderbedWindow );[m
+   Atom wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);[m
+   XSetWMProtocols(display, window, &wmDeleteMessage, 1);[m
+ [m
+[36m@@ -158,6 +245,7 @@[m [mint main(int argc, char **argv) {[m
+ [m
+   //парсинг[m
+   while (getword(word) != EOF) {[m
+[32m+[m[32m    printf("lll\n");[m
+   // для закрывающего тега[m
+     if (word[0] == '/') {[m
+       l = 1;[m
+[36m@@ -187,10 +275,10 @@[m [mint main(int argc, char **argv) {[m
+       tags_num++;[m
+       // Yазвание класса[m
+     } else if (strcmp("class", word) == 0) {[m
+[31m-      while (getword(word) != '>') {[m
+[32m+[m[32m      while (getword(word) != '"');[m
+[32m+[m[32m      while (getword(word) != '"') {[m
+         if (isalpha(word[0])) {[m
+           stack[stack_size]->classname = my_strdup(word);[m
+[31m-          break;[m
+         }[m
+       }[m
+       //стили[m
+[36m@@ -230,7 +318,6 @@[m [mint main(int argc, char **argv) {[m
+                 index++;[m
+               } else if (index == 3) {[m
+                 stack[stack_size]->css->marginleft = atoi(word);[m
+[31m-                break;[m
+               }[m
+             }[m
+           }[m
+[36m@@ -249,13 +336,12 @@[m [mint main(int argc, char **argv) {[m
+                 index++;[m
+               } else if (index == 3) {[m
+                 stack[stack_size]->css->paddingleft = atoi(word);[m
+[31m-                break;[m
+               }[m
+             }[m
+           }[m
+[31m-        }[m
+[32m+[m[32m        }[m[41m [m
+       }[m
+[31m-    }[m
+[32m+[m[32m    }[m[41m [m
+   }[m
+ [m
+ [m
+[36m@@ -264,7 +350,7 @@[m [mint main(int argc, char **argv) {[m
+   }[m
+ [m
+ [m
+[31m-  x = y = body_x = body_y = 0;[m
+[32m+[m[32m  x = y = body_x = body_y = 150;[m
+   // draw html elements[m
+   for (k=0; k<tags_num; k++) {[m
+     if (tags_stack[k]->parent) {[m
+[36m@@ -331,6 +417,7 @@[m [mint main(int argc, char **argv) {[m
+     }[m
+ [m
+     // отрисовка div с известными размерами: высота и ширина[m
+[32m+[m[32m    printf("lalala\n");[m
+     if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {[m
+       // coordinates x y[m
+       form_height = tags_stack[k]->css->height;[m
+[36m@@ -424,6 +511,17 @@[m [mint main(int argc, char **argv) {[m
+       }[m
+     }[m
+ [m
+[32m+[m[32m    uint32_t *pixel_data = (uint32_t *)gXImage->data;[m
+[32m+[m[32m    // отрисовка текста[m
+[32m+[m[32m    for (int v = 0; v < HEIGHT; v++) {[m
+[32m+[m[32m      for (int z = 0; z < WIDTH; z++) {[m
+[32m+[m[32m        if (image[v][z] != 0) {[m
+[32m+[m[32m          *(pixel_data + z) = 0x000000;[m
+[32m+[m[32m        }[m
+[32m+[m[32m      }[m
+[32m+[m[32m      pixel_data = pixel_data + kWindowWidth;[m
+[32m+[m[32m    }[m
+[32m+[m
+     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,[m
+               kWindowHeight);[m
+ [m
+[36m@@ -489,7 +587,8 @@[m [mint getword(char *word) {[m
+ [m
+   while(isspace(c = getch()))  [m
+     ;[m
+[31m-[m
+[32m+[m[32m  printf("lalalal\n");[m
+[32m+[m[32m  printf("%c\n", c);[m
+   if (c == '<') {[m
+     if ((isalpha(c = getch()) || (c == '/'))) {[m
+       *w++ = c;[m
+[36m@@ -498,23 +597,27 @@[m [mint getword(char *word) {[m
+       }[m
+       *w = '\0';[m
+       return word[0];[m
+[32m+[m[32m      //ignore comments[m
+     } else if (c == '!' && (c = getch()) == '-' && (c = getch()) == '-') {[m
+       while ((c = getch()) != '-' && (c = getch()) != '-' && (c = getch()) != '-')[m
+         ;[m
+     }[m
+   }[m
+ [m
+[31m-[m
+[32m+[m[32m  putchar(c);[m
+   if (isalnum(c)) {[m
+     *w++ = c;[m
+     while (isalnum(c = getch())) {[m
+       *w++ = c;[m
+     }[m
+[32m+[m[32m    putchar(c);[m
+     ungetch(c);[m
+[32m+[m[32m    putchar(c);[m
+     *w = '\0';[m
+     return word[0];[m
+   } else {[m
+     *w = '\n';[m
+[32m+[m[32m    putchar(c);[m
+     return c;[m
+   }[m
+ }[m
