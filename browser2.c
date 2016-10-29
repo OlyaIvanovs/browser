@@ -88,6 +88,7 @@ struct stylenode {
 struct tnode {
   char *name;
   char *classname;
+  char *textnode;
   struct tnode *parent;
   struct stylenode *css;
 };
@@ -358,14 +359,14 @@ int main(int argc, char **argv) {
           gettextnode(textnode);
           strcpy(htextnode, word);
           strcat(htextnode, textnode);
-          printf("%s\n", htextnode);
+          stack[stack_size]->textnode = my_strdup(htextnode);
         }
       } else {
         // если срока отделена от < пробелом, то:
         gettextnode(textnode);
         strcpy(htextnode, word);
         strcat(htextnode, textnode);
-        printf("%s\n", htextnode);
+        stack[stack_size]->textnode = my_strdup(htextnode);
       }
     } 
   }
@@ -453,6 +454,21 @@ int main(int argc, char **argv) {
       if (tags_stack[k]->css->marginbottom) {
         y += tags_stack[k]->css->marginbottom;
         tags_stack[k]->css->y += tags_stack[k]->css->marginbottom;
+      }
+    }
+
+    //отрисовка текста
+    if (tags_stack[k]->textnode) {
+      num_chars = strlen(tags_stack[k]->textnode);
+      for (n1 = 0; n1 < num_chars; n1++ ) {
+        error = FT_Load_Char( face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
+        if ( error ) continue;  
+        draw_bitmap( &slot->bitmap, slot->bitmap_left + metr, slot->bitmap_top + metr_top);
+        metr += slot->metrics.width/64*1.35;
+        if (metr > (WIDTH - slot->metrics.width/64*1.35)) {
+          metr = 0;
+          metr_top += slot->metrics.height/64*1.35;
+        } 
       }
     }
 
