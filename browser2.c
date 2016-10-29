@@ -27,7 +27,8 @@ static int stack_size;
 #define COUNT_OF(x) \
   ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
 #define NKEYS (sizeof keywords / sizeof(keywords[0]))  
-#define MAXLEN 100
+#define MAXLEN 50
+#define MAXTEXT 1000  
 #define MAXWORD 100
 #define BUFSIZE 100
 #define RED 0xFF0000
@@ -100,6 +101,7 @@ struct tnode *tags_stack[MAXLEN];
 int getch(void);
 void ungeth(int c);
 int getword(char *word);
+int gettextnode(char *textnode);
 struct tnode *addnode(struct tnode *p, char *w);
 int binsearch(char *word, char *keywords[], int n);
 char *my_strdup(char *s);
@@ -138,6 +140,8 @@ int main(int argc, char **argv) {
   struct tnode *b;
   struct tnode *st[MAXLEN];
   char word[MAXWORD];
+  char textnode[MAXTEXT];
+  char htextnode[MAXTEXT];
   char styleline[MAXLEN];
   char param[MAXLEN];
   char value[MAXLEN];
@@ -340,7 +344,30 @@ int main(int argc, char **argv) {
           }
         } 
       }
-    }
+    } else {
+      //textnode 1.после '>'
+      if (word[0] == '>'){
+        // отделяем слово от '>'
+        l = 1;
+        while(word[l] != '\0') {
+          word[l-1] = word[l];
+          l++;
+        }
+        word[l-1] = '\0';
+        if (l > 1) {
+          gettextnode(textnode);
+          strcpy(htextnode, word);
+          strcat(htextnode, textnode);
+          printf("%s\n", htextnode);
+        }
+      } else {
+        // если срока отделена от < пробелом, то:
+        gettextnode(textnode);
+        strcpy(htextnode, word);
+        strcat(htextnode, textnode);
+        printf("%s\n", htextnode);
+      }
+    } 
   }
 
 
@@ -578,6 +605,19 @@ struct stylenode *addstyle(struct stylenode *p) {
   return p;
 }
 
+int gettextnode(char *textnode) {
+  int c, getch(void);
+  void ungetch(int);
+  char *w = textnode;
+
+  while ((c=getch()) != '<') {
+    *w++ = c;
+  }
+  *w = '\0';
+  ungetch(c);
+  return textnode[0];
+}
+
 int getword(char *word) {
   int c, getch(void);
   void ungetch(int);
@@ -601,7 +641,7 @@ int getword(char *word) {
   }
 
 
-  if (isalnum(c)) {
+  if (isalnum(c) || c == '>') {
     *w++ = c;
     while (isalnum(c = getch())) {
       *w++ = c;
