@@ -188,33 +188,6 @@ int main(int argc, char **argv) {
   }
 
 
-  slot = face->glyph;
-  int metr = 0;
-  int metr_top = 0;
-
-  // картинка для каждой отдельной буквы
-  for ( n1 = 0; n1 < num_chars; n1++ )
-  {
-    /* load glyph image into the slot (erase previous one) */
-
-    error = FT_Load_Char( face, text[n1], FT_LOAD_RENDER );
-    if ( error )
-      continue;                 /* ignore errors */
-
-    draw_bitmap( &slot->bitmap,
-                 slot->bitmap_left + metr,
-                 slot->bitmap_top + metr_top);
-    // каждую следующую букву смещаем на ширину предыдущей * 1.35
-    // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
-    metr += slot->metrics.width/64*1.35;
-    // если строчка в ширину кончилась, перенос на следующую строку
-    if (metr > (WIDTH - slot->metrics.width/64*1.35)) {
-      metr = 0;
-      metr_top += slot->metrics.height/64*1.35;
-    } 
-  }
-
-
   root = NULL;
 
   // создание окна
@@ -377,7 +350,7 @@ int main(int argc, char **argv) {
   }
 
 
-  x = y = body_x = body_y = 150;
+  x = y = body_x = body_y = 0;
   // draw html elements
   for (k=0; k<tags_num; k++) {
     if (tags_stack[k]->parent) {
@@ -459,18 +432,32 @@ int main(int argc, char **argv) {
 
     //отрисовка текста
     if (tags_stack[k]->textnode) {
+      slot = face->glyph;
+      // координаты точки, из которой строится текст
+      int metr = tags_stack[k]->css->x;
+      int metr_top = tags_stack[k]->css->y;
+      // количество символов
       num_chars = strlen(tags_stack[k]->textnode);
+      // картинка для каждого отдельного символа
       for (n1 = 0; n1 < num_chars; n1++ ) {
-        error = FT_Load_Char( face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
-        if ( error ) continue;  
+        /* load glyph image into the slot (erase previous one) */
+        error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
+        if ( error ) continue;   /* ignore errors */
+        if (isspace(textnode[n1])) {
+          metr += slot->metrics.width/64*1.35;
+        };
         draw_bitmap( &slot->bitmap, slot->bitmap_left + metr, slot->bitmap_top + metr_top);
+        // каждую следующую букву смещаем на ширину предыдущей * 1.35
+        // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
         metr += slot->metrics.width/64*1.35;
+        // если строчка в ширину кончилась, перенос на следующую строку
         if (metr > (WIDTH - slot->metrics.width/64*1.35)) {
           metr = 0;
           metr_top += slot->metrics.height/64*1.35;
         } 
       }
     }
+
 
     //padding-bottom
     if (tags_stack[k]->css->paddingbottom) {
