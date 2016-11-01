@@ -160,14 +160,13 @@ int main(int argc, char **argv) {
   FT_Face face;
   FT_GlyphSlot slot;
   FT_Error error;
+  FT_Vector pen;
   char *filename;
   char *text;
   int target_height;
   int n1, num_chars;
 
   filename = argv[1];
-  text = argv[2];
-  num_chars = strlen(text);
 
   // Errors Freetype
   error = FT_Init_FreeType(&library);                 /* initialize library */
@@ -350,7 +349,7 @@ int main(int argc, char **argv) {
   }
 
 
-  x = y = body_x = body_y = 0;
+  x = y = body_x = body_y = 100;
   // draw html elements
   for (k=0; k<tags_num; k++) {
     if (tags_stack[k]->parent) {
@@ -433,9 +432,10 @@ int main(int argc, char **argv) {
     //отрисовка текста
     if (tags_stack[k]->textnode) {
       slot = face->glyph;
-      // координаты точки, из которой строится текст
-      int metr = tags_stack[k]->css->x;
-      int metr_top = tags_stack[k]->css->y;
+      /* the pen position in 26.6 cartesian space coordinates; */
+      /* start at .. relative to the upper left corner  */
+      pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
+      pen.y = (tags_stack[k]->css->y + tags_stack[k]->css->paddingtop + 15);
       // количество символов
       num_chars = strlen(tags_stack[k]->textnode);
       // картинка для каждого отдельного символа
@@ -443,18 +443,17 @@ int main(int argc, char **argv) {
         /* load glyph image into the slot (erase previous one) */
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   /* ignore errors */
-        if (isspace(textnode[n1])) {
-          metr += slot->metrics.width/64*1.35;
-        };
-        draw_bitmap( &slot->bitmap, slot->bitmap_left + metr, slot->bitmap_top + metr_top);
-        // каждую следующую букву смещаем на ширину предыдущей * 1.35
+        /* now, draw to our target surface */
+        draw_bitmap( &slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top );
         // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
-        metr += slot->metrics.width/64*1.35;
+        /* increment pen position */
+        pen.x += slot->advance.x/64;
+        pen.y += slot->advance.y;
         // если строчка в ширину кончилась, перенос на следующую строку
-        if (metr > (WIDTH - slot->metrics.width/64*1.35)) {
-          metr = 0;
-          metr_top += slot->metrics.height/64*1.35;
-        } 
+        // if (metr > (WIDTH - slot->metrics.width/64*1.35)) {
+        //   metr = 0;
+        //   metr_top += slot->metrics.height/64*1.35;
+        // } 
       }
     }
 
