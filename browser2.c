@@ -83,6 +83,8 @@ struct stylenode {
   int paddingbottomline;
   int x;
   int y;
+  int fontsize;
+  int color;
 };
 
 struct tnode {
@@ -109,6 +111,7 @@ char *my_strdup(char *s);
 struct tnode *talloc(void);
 struct stylenode *salloc(void);
 void drawdiv(int x, int y, int height, int width, int bg);
+void drawtext(int width, int color);
 
 
 
@@ -180,12 +183,6 @@ int main(int argc, char **argv) {
   } else if ( error ) {
     printf("font file could not be opened or read, or that it is broken");
   }
-
-  error = FT_Set_Char_Size(face, 20 * 64, 0, 100, 0); /* set character size */
-  if ( error ) {
-    printf("an error occurred during seting character size");
-  }
-
 
   root = NULL;
 
@@ -278,7 +275,19 @@ int main(int argc, char **argv) {
             if (isalnum(word[0])) {
               stack[stack_size]->css->bg = (int)strtol(word, NULL, 16);
             }
-          }
+          } 
+        } else if (strcmp("color", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->color = (int)strtol(word, NULL, 16);
+            }
+          } 
+        } else if (strcmp("fontsize", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->fontsize = atoi(word);
+            }
+          } 
         } else if (strcmp("margin", word) == 0){
           index = 0;
           while (getword(word) != ';') {
@@ -435,7 +444,11 @@ int main(int argc, char **argv) {
       /* the pen position in 26.6 cartesian space coordinates; */
       /* start at .. relative to the upper left corner  */
       pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
-      pen.y = (tags_stack[k]->css->y + tags_stack[k]->css->paddingtop + 15);
+      pen.y = (tags_stack[k]->css->y + tags_stack[k]->css->paddingtop + tags_stack[k]->css->fontsize);
+      error = FT_Set_Char_Size(face, tags_stack[k]->css->fontsize * 64, 0, 100, 0); /* set character size */
+      if ( error ) {
+        printf("an error occurred during seting character size");
+      }
       // количество символов
       num_chars = strlen(tags_stack[k]->textnode);
       // картинка для каждого отдельного символа
@@ -446,15 +459,16 @@ int main(int argc, char **argv) {
         /* now, draw to our target surface */
         draw_bitmap( &slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top );
         // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
-        /* increment pen position */
         pen.x += slot->advance.x/64;
-        pen.y += slot->advance.y;
         // если строчка в ширину кончилась, перенос на следующую строку
-        // if (metr > (WIDTH - slot->metrics.width/64*1.35)) {
-        //   metr = 0;
-        //   metr_top += slot->metrics.height/64*1.35;
-        // } 
+        if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64)) {
+          pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
+          pen.y += slot->metrics.height/64 * 1.7; // 1.7 - line-height
+        } 
       }
+      printf("%d\n", tags_stack[k]->css->width.val);
+      drawtext(tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+      
     }
 
 
@@ -538,17 +552,6 @@ int main(int argc, char **argv) {
       }
     }
 
-    uint32_t *pixel_data = (uint32_t *)gXImage->data;
-    // отрисовка текста
-    for (int v = 0; v < HEIGHT; v++) {
-      for (int z = 0; z < WIDTH; z++) {
-        if (image[v][z] != 0) {
-          *(pixel_data + z) = 0x000000;
-        }
-      }
-      pixel_data = pixel_data + kWindowWidth;
-    }
-
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
               kWindowHeight);
 
@@ -569,6 +572,19 @@ void drawdiv(int x, int y, int height, int width, int bg) {
   for (v = 0; v < height; v++) {
     for (z = 0; z < width; z++) {
       *(pixel_data + z) = bg;
+    }
+    pixel_data = pixel_data + kWindowWidth;
+  }
+}
+
+void drawtext(int width, int color) {
+  uint32_t *pixel_data = (uint32_t *)gXImage->data;
+  // отрисовка текст
+  for (int v = 0; v < HEIGHT; v++) {
+    for (int z = 0; z < width; z++) {
+      if (image[v][z] != 0) {
+        *(pixel_data + z) = color;
+      }
     }
     pixel_data = pixel_data + kWindowWidth;
   }
@@ -595,7 +611,8 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->paddingtop = 0;
   p->css->paddingbottom = 0;
   p->css->paddingleft = 0;
-  p->css->paddingright = 0;
+  p->css->paddingright = 0; 
+  p->css->fontsize = 20;
   // p->css->bg = 0xFFFFFF;
   return p;
 }
