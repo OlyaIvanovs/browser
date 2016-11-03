@@ -39,28 +39,6 @@ static int stack_size;
 #define ANSI_COLOR_BLUE "\x1b[34m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
-// textarea parameters
-#define WIDTH 640
-#define HEIGHT 480
-unsigned char image[HEIGHT][WIDTH];
-
-
-// textarea symbols
-void
-draw_bitmap(FT_Bitmap *bitmap, FT_Int x, FT_Int y) {
-  FT_Int i, j, p, q;
-  FT_Int x_max = x + bitmap->width;
-  FT_Int y_max = y + bitmap->rows;
-
-  for (i = x, p = 0; i < x_max; i++, p++) {
-    for (j = y, q = 0; j < y_max; j++, q++) {
-      if (i < 0 || j < 0 || i >= WIDTH || j >= HEIGHT) continue;
-
-      image[j][i] = bitmap->buffer[q * bitmap->width + p];
-    }
-  }
-}
-
 char buf[BUFSIZE];
 int bufp = 0;
 
@@ -111,7 +89,7 @@ char *my_strdup(char *s);
 struct tnode *talloc(void);
 struct stylenode *salloc(void);
 void drawdiv(int x, int y, int height, int width, int bg);
-void drawtext(int width, int color);
+void drawtext(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color);
 
 
 
@@ -441,38 +419,42 @@ int main(int argc, char **argv) {
     //отрисовка текста
     if (tags_stack[k]->textnode) {
       slot = face->glyph;
-      /* the pen position in 26.6 cartesian space coordinates; */
-      /* start at .. relative to the upper left corner  */
+      /* the pen position in 26.6 cartesian space coordinates; start at .. relative to the upper left corner  */
       pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
-      pen.y = (tags_stack[k]->css->y + tags_stack[k]->css->paddingtop + tags_stack[k]->css->fontsize);
+      pen.y = (tags_stack[k]->css->y + tags_stack[k]->css->fontsize); 
       error = FT_Set_Char_Size(face, tags_stack[k]->css->fontsize * 64, 0, 100, 0); /* set character size */
       if ( error ) {
         printf("an error occurred during seting character size");
       }
-      // количество символов
+      // если высоты у дива нет , растягиваем его на высоту строки текста
+      if (tags_stack[k]->css->height == 0) {
+        tags_stack[k]->css->height += (int)(tags_stack[k]->css->fontsize*1.6);
+        drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, 
+          tags_stack[k]->css->height, tags_stack[k]->css->width.val, (int)strtol("#f442aa", NULL, 16));
+        y += tags_stack[k]->css->height;
+        tags_stack[k]->css->y += tags_stack[k]->css->height;
+      }
       num_chars = strlen(tags_stack[k]->textnode);
-      // картинка для каждого отдельного символа
       for (n1 = 0; n1 < num_chars; n1++ ) {
+        int start_text_y = pen.y + tags_stack[k]->css->fontsize*0.4; // 0.4 для того, чтобы не образелся нижний хвостик буквы
         /* load glyph image into the slot (erase previous one) */
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   /* ignore errors */
-        /* now, draw to our target surface */
-        draw_bitmap( &slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top );
-        // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
-        pen.x += slot->advance.x/64;
+        drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+        pen.x += slot->advance.x/64; // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
         // если строчка в ширину кончилась, перенос на следующую строку
         if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64)) {
           pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
-          pen.y += slot->metrics.height/64 * 1.7; // 1.7 - line-height
+          pen.y += tags_stack[k]->css->fontsize*1.6; // 1.7 - line-height
         } 
+        if (pen.y > start_text_y) {
+          drawdiv(tags_stack[k]->css->x, start_text_y, tags_stack[k]->css->fontsize*1.6, form_width, tags_stack[k]->css->bg);
+        }
       }
-      printf("%d\n", tags_stack[k]->css->width.val);
-      drawtext(tags_stack[k]->css->width.val, tags_stack[k]->css->color);
-      
     }
 
 
-    //padding-bottom
+    // //padding-bottom
     if (tags_stack[k]->css->paddingbottom) {
       drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingbottom,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
       y += tags_stack[k]->css->paddingbottom;
@@ -577,13 +559,17 @@ void drawdiv(int x, int y, int height, int width, int bg) {
   }
 }
 
-void drawtext(int width, int color) {
+void drawtext(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color) {
   uint32_t *pixel_data = (uint32_t *)gXImage->data;
-  // отрисовка текст
-  for (int v = 0; v < HEIGHT; v++) {
-    for (int z = 0; z < width; z++) {
-      if (image[v][z] != 0) {
-        *(pixel_data + z) = color;
+  FT_Int i, j, p, q;
+  FT_Int x_max = x + bitmap->width;
+  FT_Int y_max = y + bitmap->rows;
+
+  pixel_data = pixel_data + (kWindowWidth * y) + x;
+  for (i = y, p = 0; i < y_max; i++, p++) {
+    for (j = x, q = 0; j < x_max; j++, q++) {
+      if (bitmap->buffer[p * bitmap->width + q] != 0) {
+        *(pixel_data + q) = color;
       }
     }
     pixel_data = pixel_data + kWindowWidth;

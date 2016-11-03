@@ -7,7 +7,13 @@ mkdir -p build
 
 
 gcc browser2.c  -I/usr/include/freetype2 -lfreetype -lX11 -o build/browser -g
-./build/browser <parse.html /usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-C.ttf "SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE"
+./build/browser <parse.html /usr/share/fonts/truetype/ubuntu-font-family/Ubuntu-L.ttf "SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE SAMPLE_SAMPSAMPLE"
+
+# Ubuntu-BI.ttf  Ubuntu-LI.ttf  UbuntuMono-BI.ttf  UbuntuMono-R.ttf  Ubuntu-R.ttf
+# Ubuntu-B.ttf   Ubuntu-L.ttf   UbuntuMono-B.ttf   Ubuntu-M.ttf
+# Ubuntu-C.ttf   Ubuntu-MI.ttf  UbuntuMono-RI.ttf  Ubuntu-RI.ttf
+
+
 
 
 
