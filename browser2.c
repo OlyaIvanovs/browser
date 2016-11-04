@@ -430,7 +430,7 @@ int main(int argc, char **argv) {
       if (tags_stack[k]->css->height == 0) {
         tags_stack[k]->css->height += (int)(tags_stack[k]->css->fontsize*1.6);
         drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, 
-          tags_stack[k]->css->height, tags_stack[k]->css->width.val, (int)strtol("#f442aa", NULL, 16));
+          tags_stack[k]->css->height, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
         y += tags_stack[k]->css->height;
         tags_stack[k]->css->y += tags_stack[k]->css->height;
       }
@@ -443,12 +443,17 @@ int main(int argc, char **argv) {
         drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
         pen.x += slot->advance.x/64; // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
         // если строчка в ширину кончилась, перенос на следующую строку
-        if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64)) {
+        if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64 - tags_stack[k]->css->paddingright)) {
           pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
           pen.y += tags_stack[k]->css->fontsize*1.6; // 1.7 - line-height
         } 
-        if (pen.y > start_text_y) {
-          drawdiv(tags_stack[k]->css->x, start_text_y, tags_stack[k]->css->fontsize*1.6, form_width, tags_stack[k]->css->bg);
+        if (pen.y > y) {
+          int height_diff = (int)(tags_stack[k]->css->fontsize*1.6);
+          tags_stack[k]->css->height += height_diff;
+          drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, 
+            height_diff, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+          y += height_diff;
+          tags_stack[k]->css->y += height_diff;
         }
       }
     }
