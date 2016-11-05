@@ -336,7 +336,7 @@ int main(int argc, char **argv) {
   }
 
 
-  x = y = body_x = body_y = 100;
+  x = y = body_x = body_y = 0;
   // draw html elements
   for (k=0; k<tags_num; k++) {
     if (tags_stack[k]->parent) {
@@ -418,6 +418,7 @@ int main(int argc, char **argv) {
 
     //отрисовка текста
     if (tags_stack[k]->textnode) {
+      printf("lalal\n");
       slot = face->glyph;
       /* the pen position in 26.6 cartesian space coordinates; start at .. relative to the upper left corner  */
       pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
@@ -589,6 +590,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->name = my_strdup(w);
   p->parent = stack[stack_size];
   p->classname = NULL;
+  p->textnode = NULL;
   p->css = salloc();
   p->css->height = 0;
   p->css->width.val = 0;
