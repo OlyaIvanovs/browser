@@ -418,26 +418,24 @@ int main(int argc, char **argv) {
 
     //отрисовка текста
     if (tags_stack[k]->textnode) {
-      printf("lalal\n");
       slot = face->glyph;
       /* the pen position in 26.6 cartesian space coordinates; start at .. relative to the upper left corner  */
       pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
-      pen.y = (tags_stack[k]->css->y + tags_stack[k]->css->fontsize); 
+      pen.y = (tags_stack[k]->css->y + tags_stack[k]->css->fontsize*1.6); /*+10% во избежание вылезания шрифта за верхние пределы экрана*/
+      int diff_pen_y = (int)(tags_stack[k]->css->fontsize*1.6);
+      int diff_y = (int)(tags_stack[k]->css->fontsize*2);
       error = FT_Set_Char_Size(face, tags_stack[k]->css->fontsize * 64, 0, 100, 0); /* set character size */
       if ( error ) {
         printf("an error occurred during seting character size");
       }
       // если высоты у дива нет , растягиваем его на высоту строки текста
       if (tags_stack[k]->css->height == 0) {
-        tags_stack[k]->css->height += (int)(tags_stack[k]->css->fontsize*1.6);
-        drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, 
-          tags_stack[k]->css->height, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
-        y += tags_stack[k]->css->height;
-        tags_stack[k]->css->y += tags_stack[k]->css->height;
+        drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+        y += diff_y;
+        tags_stack[k]->css->y += diff_y;
       }
       num_chars = strlen(tags_stack[k]->textnode);
       for (n1 = 0; n1 < num_chars; n1++ ) {
-        int start_text_y = pen.y + tags_stack[k]->css->fontsize*0.4; // 0.4 для того, чтобы не образелся нижний хвостик буквы
         /* load glyph image into the slot (erase previous one) */
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   /* ignore errors */
@@ -446,15 +444,12 @@ int main(int argc, char **argv) {
         // если строчка в ширину кончилась, перенос на следующую строку
         if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64 - tags_stack[k]->css->paddingright)) {
           pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
-          pen.y += tags_stack[k]->css->fontsize*1.6; // 1.7 - line-height
+          pen.y += diff_pen_y;
         } 
-        if (pen.y > y) {
-          int height_diff = (int)(tags_stack[k]->css->fontsize*1.6);
-          tags_stack[k]->css->height += height_diff;
-          drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, 
-            height_diff, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
-          y += height_diff;
-          tags_stack[k]->css->y += height_diff;
+        if (pen.y > tags_stack[k]->css->y) {
+          drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+          y += diff_y;
+          tags_stack[k]->css->y += diff_y;
         }
       }
     }
@@ -518,7 +513,32 @@ int main(int argc, char **argv) {
           }
         }
         // отрисовка элемента
-        drawdiv(a->css->x, a->css->y - a->css->paddingtop, a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);     
+        drawdiv(a->css->x, a->css->y - a->css->paddingtop, a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg); 
+        // if (a->textnode) {
+        //   slot = face->glyph;
+        //   pen.x = a->css->x + a->css->paddingleft;
+        //   pen.y = (a->css->y + a->css->fontsize*1.6);
+        //   int diff_pen_y = (int)(a->css->fontsize*1.6);
+        //   int diff_y = (int)(a->css->fontsize*2);
+        //   error = FT_Set_Char_Size(face, a->css->fontsize * 64, 0, 100, 0); /* set character size */
+        //   if ( error ) {
+        //     printf("an error occurred during seting character size");
+        //   }
+        //   if (a->css->height == 0) {
+        //     drawdiv(a->css->x, a->css->y, diff_y, a->css->width.val, a->css->bg);
+        //   }
+        //   num_chars = strlen(a->textnode);
+        //   for (n1 = 0; n1 < num_chars; n1++ ) {
+        //     error = FT_Load_Char(face, a->textnode[n1], FT_LOAD_RENDER );
+        //     if ( error ) continue; 
+        //     drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, a->css->width.val, a->css->color);
+        //     pen.x += slot->advance.x/64; 
+        //     if ((pen.x - a->css->x) > (a->css->width.val - slot->advance.x/64 - a->css->paddingright)) {
+        //       pen.x = a->css->x + a->css->paddingleft;
+        //       pen.y += diff_pen_y;
+        //     } 
+        //   }
+        // }
       }
     }
   }
