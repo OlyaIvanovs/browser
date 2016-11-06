@@ -63,6 +63,7 @@ struct stylenode {
   int y;
   int fontsize;
   int color;
+  int textheight;
 };
 
 struct tnode {
@@ -146,6 +147,7 @@ int main(int argc, char **argv) {
   char *text;
   int target_height;
   int n1, num_chars;
+  int diff_pen_y, diff_y;
 
   filename = argv[1];
 
@@ -382,7 +384,9 @@ int main(int argc, char **argv) {
     
     //paddingtop
     if (tags_stack[k]->css->paddingtop) {
-      drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingtop,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+      if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
+         drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingtop,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+      }
       tags_stack[k]->css->y += tags_stack[k]->css->paddingtop;
       y += tags_stack[k]->css->paddingtop;
     }
@@ -407,7 +411,10 @@ int main(int argc, char **argv) {
       // coordinates x y
       form_height = tags_stack[k]->css->height;
       form_width = tags_stack[k]->css->width.val;
-      drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, form_height, form_width, tags_stack[k]->css->bg);
+      // отрисовываем элемент в 2 случаях: если нет родителя или высота родителя задана
+      if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
+        drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, form_height, form_width, tags_stack[k]->css->bg);
+      }
       y += form_height ;
       // margin-bottom
       if (tags_stack[k]->css->marginbottom) {
@@ -422,24 +429,33 @@ int main(int argc, char **argv) {
       /* the pen position in 26.6 cartesian space coordinates; start at .. relative to the upper left corner  */
       pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
       pen.y = (tags_stack[k]->css->y + tags_stack[k]->css->fontsize*1.6); /*+10% во избежание вылезания шрифта за верхние пределы экрана*/
-      int diff_pen_y = (int)(tags_stack[k]->css->fontsize*1.6);
-      int diff_y = (int)(tags_stack[k]->css->fontsize*2);
+      // изменение y точки, которая указывает на строку Origin(baseline)
+      diff_pen_y = (int)(tags_stack[k]->css->fontsize*1.6);
+      // изменение y точки, которая указывает на низ строки
+      diff_y = (int)(tags_stack[k]->css->fontsize*2);
       error = FT_Set_Char_Size(face, tags_stack[k]->css->fontsize * 64, 0, 100, 0); /* set character size */
       if ( error ) {
         printf("an error occurred during seting character size");
       }
-      // если высоты у дива нет , растягиваем его на высоту строки текста
+      // если высоты у дива нет , растягиваем его на высоту одной строки текста
       if (tags_stack[k]->css->height == 0) {
-        drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+        // отрисовываем элемент в 2 случаях: если нет родителя или высота родителя задана
+        if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
+          drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+        }
         y += diff_y;
         tags_stack[k]->css->y += diff_y;
+        tags_stack[k]->css->textheight += diff_y;
       }
       num_chars = strlen(tags_stack[k]->textnode);
       for (n1 = 0; n1 < num_chars; n1++ ) {
         /* load glyph image into the slot (erase previous one) */
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   /* ignore errors */
-        drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+        // если родителя нет, значит нет необходимости перерисовывать и можно нарисовать текст на элементе сразу
+        if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
+          drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+        }
         pen.x += slot->advance.x/64; // ширинв slot измеряется не в пикселях а в точках. Чтобы получить кол-во пиксеоей надо поделить на 64
         // если строчка в ширину кончилась, перенос на следующую строку
         if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64 - tags_stack[k]->css->paddingright)) {
@@ -447,9 +463,12 @@ int main(int argc, char **argv) {
           pen.y += diff_pen_y;
         } 
         if (pen.y > tags_stack[k]->css->y) {
-          drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+          if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
+            drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+          }
           y += diff_y;
           tags_stack[k]->css->y += diff_y;
+          tags_stack[k]->css->textheight += diff_y;
         }
       }
     }
@@ -457,7 +476,9 @@ int main(int argc, char **argv) {
 
     // //padding-bottom
     if (tags_stack[k]->css->paddingbottom) {
-      drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingbottom,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+      if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
+        drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingbottom,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+      }
       y += tags_stack[k]->css->paddingbottom;
     }
 
@@ -513,32 +534,31 @@ int main(int argc, char **argv) {
           }
         }
         // отрисовка элемента
-        drawdiv(a->css->x, a->css->y - a->css->paddingtop, a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg); 
-        // if (a->textnode) {
-        //   slot = face->glyph;
-        //   pen.x = a->css->x + a->css->paddingleft;
-        //   pen.y = (a->css->y + a->css->fontsize*1.6);
-        //   int diff_pen_y = (int)(a->css->fontsize*1.6);
-        //   int diff_y = (int)(a->css->fontsize*2);
-        //   error = FT_Set_Char_Size(face, a->css->fontsize * 64, 0, 100, 0); /* set character size */
-        //   if ( error ) {
-        //     printf("an error occurred during seting character size");
-        //   }
-        //   if (a->css->height == 0) {
-        //     drawdiv(a->css->x, a->css->y, diff_y, a->css->width.val, a->css->bg);
-        //   }
-        //   num_chars = strlen(a->textnode);
-        //   for (n1 = 0; n1 < num_chars; n1++ ) {
-        //     error = FT_Load_Char(face, a->textnode[n1], FT_LOAD_RENDER );
-        //     if ( error ) continue; 
-        //     drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, a->css->width.val, a->css->color);
-        //     pen.x += slot->advance.x/64; 
-        //     if ((pen.x - a->css->x) > (a->css->width.val - slot->advance.x/64 - a->css->paddingright)) {
-        //       pen.x = a->css->x + a->css->paddingleft;
-        //       pen.y += diff_pen_y;
-        //     } 
-        //   }
-        // }
+        drawdiv(a->css->x, a->css->y - a->css->paddingtop - a->css->textheight, 
+          a->css->paddingtop + a->css->height + a->css->textheight + a->css->paddingbottom, a->css->width.val, a->css->bg); 
+        // текст элемента
+        if (a->textnode) {
+          slot = face->glyph;
+          diff_pen_y = (int)(a->css->fontsize*1.6);
+          diff_y = (int)(a->css->fontsize*2);
+          pen.x = a->css->x + a->css->paddingleft;
+          pen.y = a->css->y - a->css->textheight + diff_pen_y;
+          error = FT_Set_Char_Size(face, a->css->fontsize * 64, 0, 100, 0);
+          if ( error ) {
+            printf("an error occurred during seting character size");
+          }
+          num_chars = strlen(a->textnode);
+          for (n1 = 0; n1 < num_chars; n1++ ) {
+            error = FT_Load_Char(face, a->textnode[n1], FT_LOAD_RENDER );
+            if ( error ) continue;   
+            drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, a->css->width.val, a->css->color);
+            pen.x += slot->advance.x/64; 
+            if ((pen.x - a->css->x) > (a->css->width.val - slot->advance.x/64 - a->css->paddingright)) {
+              pen.x = a->css->x + a->css->paddingleft;
+              pen.y += diff_pen_y;
+            } 
+          }
+        }
       }
     }
   }
@@ -626,6 +646,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->paddingleft = 0;
   p->css->paddingright = 0; 
   p->css->fontsize = 20;
+  p->css->textheight = 0;
   // p->css->bg = 0xFFFFFF;
   return p;
 }
