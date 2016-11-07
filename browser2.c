@@ -437,19 +437,23 @@ int main(int argc, char **argv) {
       if ( error ) {
         printf("an error occurred during seting character size");
       }
-      // если высоты у дива нет , растягиваем его на высоту одной строки текста
-      if (tags_stack[k]->css->height == 0) {
-        // отрисовываем элемент в 2 случаях: если нет родителя или высота родителя задана
-        if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
-          drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
-        }
-        y += diff_y;
-        tags_stack[k]->css->y += diff_y;
-        tags_stack[k]->css->textheight += diff_y;
-      }
       num_chars = strlen(tags_stack[k]->textnode);
       for (n1 = 0; n1 < num_chars; n1++ ) {
-        /* load glyph image into the slot (erase previous one) */
+        if (pen.y > tags_stack[k]->css->y) {
+          if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
+            drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+          }
+          tags_stack[k]->css->y += diff_y;
+          tags_stack[k]->css->textheight += diff_y;
+          if (tags_stack[k]->css->height) {
+            if (tags_stack[k]->css->y > y) {
+              tags_stack[k]->css->y = y;
+              break;
+            }
+          } else {
+            y += diff_y;
+          }
+        }
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   /* ignore errors */
         // если родителя нет, значит нет необходимости перерисовывать и можно нарисовать текст на элементе сразу
@@ -462,14 +466,6 @@ int main(int argc, char **argv) {
           pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
           pen.y += diff_pen_y;
         } 
-        if (pen.y > tags_stack[k]->css->y) {
-          if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
-            drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
-          }
-          y += diff_y;
-          tags_stack[k]->css->y += diff_y;
-          tags_stack[k]->css->textheight += diff_y;
-        }
       }
     }
 
@@ -533,16 +529,24 @@ int main(int argc, char **argv) {
             }
           }
         }
+
         // отрисовка элемента
-        drawdiv(a->css->x, a->css->y - a->css->paddingtop - a->css->textheight, 
-          a->css->paddingtop + a->css->height + a->css->textheight + a->css->paddingbottom, a->css->width.val, a->css->bg); 
+        int innerheight = (a->css->height) ? a->css->height : a->css->textheight; // растягиваем блок либо на высоту блока либо на высоту текста
+        // (a->css->y - a->css->paddingtop - innerheight)  -отрисовка блока с самого верхнего угла
+        drawdiv(a->css->x, a->css->y - a->css->paddingtop - innerheight, 
+          a->css->paddingtop + innerheight + a->css->paddingbottom, a->css->width.val, a->css->bg); 
+        
         // текст элемента
         if (a->textnode) {
           slot = face->glyph;
           diff_pen_y = (int)(a->css->fontsize*1.6);
           diff_y = (int)(a->css->fontsize*2);
           pen.x = a->css->x + a->css->paddingleft;
-          pen.y = a->css->y - a->css->textheight + diff_pen_y;
+          pen.y = a->css->y - innerheight + diff_pen_y;
+          // если координата указателя на текст ниже координаты блока, то текст не рисуем
+          if (pen.y > a->css->y) {
+            break;
+          } 
           error = FT_Set_Char_Size(face, a->css->fontsize * 64, 0, 100, 0);
           if ( error ) {
             printf("an error occurred during seting character size");
@@ -556,6 +560,9 @@ int main(int argc, char **argv) {
             if ((pen.x - a->css->x) > (a->css->width.val - slot->advance.x/64 - a->css->paddingright)) {
               pen.x = a->css->x + a->css->paddingleft;
               pen.y += diff_pen_y;
+              if (pen.y > a->css->y) {
+                break;
+              }
             } 
           }
         }
