@@ -219,7 +219,15 @@ int main(int argc, char **argv) {
         }
       }
       // открывающийся тег
-    } else if ((binsearch(word, keywords, NKEYS)) >= 0) {
+    } else if ((binsearch(word, keywords, NKEYS)) >= 0) { 
+      // if (i > 0 && stack[i-1]->name == "textnode") {
+      if (i > 0 && strcmp(stack[i-1]->name, "textnode") == 0) {
+        printf("mamam\n");
+        stack[stack_size] = NULL;
+        stack_size--;
+        i--;
+      }
+      printf("%d\n", i);
       root = addnode(root, word);
       stack[i] = root;
       tags_stack[tags_num] = root;
@@ -308,6 +316,12 @@ int main(int argc, char **argv) {
       }
     } else {
       //textnode 1.после '>'
+      root = addnode(root, "textnode");
+      stack[i] = root;
+      tags_stack[tags_num] = root;
+      stack_size = i;
+      i++;
+      tags_num++;
       if (word[0] == '>'){
         // отделяем слово от '>'
         l = 1;
@@ -531,10 +545,16 @@ int main(int argc, char **argv) {
         }
 
         // отрисовка элемента
-        int innerheight = (a->css->height) ? a->css->height : a->css->textheight; // растягиваем блок либо на высоту блока либо на высоту текста
-        // (a->css->y - a->css->paddingtop - innerheight)  -отрисовка блока с самого верхнего угла
-        drawdiv(a->css->x, a->css->y - a->css->paddingtop - innerheight, 
-          a->css->paddingtop + innerheight + a->css->paddingbottom, a->css->width.val, a->css->bg); 
+        int innerheight;
+        if (a->textnode) {
+          innerheight = (a->css->height) ? a->css->height : a->css->textheight; // растягиваем блок либо на высоту блока либо на высоту текста
+           // (a->css->y - a->css->paddingtop - innerheight)  -отрисовка блока с самого верхнего угла
+          drawdiv(a->css->x, a->css->y - a->css->paddingtop - innerheight, 
+            a->css->paddingtop + innerheight + a->css->paddingbottom, a->css->width.val, a->css->bg);
+        } else {
+          drawdiv(a->css->x, a->css->y - a->css->paddingtop, 
+            a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
+        } 
         
         // текст элемента
         if (a->textnode) {
