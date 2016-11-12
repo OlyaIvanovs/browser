@@ -63,7 +63,6 @@ struct stylenode {
   int y;
   int fontsize;
   int color;
-  int textheight;
 };
 
 struct tnode {
@@ -468,15 +467,12 @@ int main(int argc, char **argv) {
             drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
           }
           tags_stack[k]->css->y += diff_y;
-          tags_stack[k]->css->textheight += diff_y;
-          if (tags_stack[k]->css->height) {
-            if (tags_stack[k]->css->y > y) {
-              tags_stack[k]->css->y = y;
-              break;
-            }
-          } else {
-            y += diff_y;
-          }
+          tags_stack[k]->css->height += diff_y;
+          y += diff_y;
+          // if (tags_stack[k]->css->y > y) {
+          //   tags_stack[k]->css->y = y;
+          //   break;
+          // }
         }
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   /* ignore errors */
@@ -555,16 +551,8 @@ int main(int argc, char **argv) {
         }
 
         // отрисовка элемента
-        int innerheight;
-        if (a->textnode) {
-          innerheight = (a->css->height) ? a->css->height : a->css->textheight; // растягиваем блок либо на высоту блока либо на высоту текста
-           // (a->css->y - a->css->paddingtop - innerheight)  -отрисовка блока с самого верхнего угла
-          drawdiv(a->css->x, a->css->y - a->css->paddingtop - innerheight, 
-            a->css->paddingtop + innerheight + a->css->paddingbottom, a->css->width.val, a->css->bg);
-        } else {
-          drawdiv(a->css->x, a->css->y - a->css->paddingtop, 
-            a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
-        } 
+        drawdiv(a->css->x, a->css->y - a->css->paddingtop, 
+          a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg); 
         
         // текст элемента
         if (a->textnode) {
@@ -572,7 +560,7 @@ int main(int argc, char **argv) {
           diff_pen_y = (int)(a->css->fontsize*1.6);
           diff_y = (int)(a->css->fontsize*2);
           pen.x = a->css->x + a->css->paddingleft;
-          pen.y = a->css->y - innerheight + diff_pen_y;
+          pen.y = a->css->y - a->css->height + diff_pen_y;
           // если координата указателя на текст ниже координаты блока, то текст не рисуем
           if (pen.y > a->css->y) {
             break;
@@ -683,7 +671,6 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->paddingleft = 0;
   p->css->paddingright = 0; 
   p->css->fontsize = 20;
-  p->css->textheight = 0;
   // p->css->bg = 0xFFFFFF;
   return p;
 }
