@@ -208,25 +208,30 @@ int main(int argc, char **argv) {
       }
       word[l-1] = '\0';
       // удаления тега из списка
+      // перед удалением тега , удяляем тег textnodeб если он был
+      if (i > 0 && strcmp(stack[i-1]->name, "textnode") == 0) {
+        stack[stack_size] = NULL;
+        stack_size--;
+        i--;
+      }
       if ((binsearch(word, keywords, NKEYS)) >= 0) {
         if (strcmp(stack[stack_size]->name, word) == 0) {
           stack[stack_size] = NULL;
           stack_size--;
           i--;
         } else {
-          printf("Error: missing %s tag\n", stack[stack_size]->name);
+          printf("Error llll: missing %s tag\n", stack[stack_size]->name);
           return 0;
         }
       }
       // открывающийся тег
     } else if ((binsearch(word, keywords, NKEYS)) >= 0) { 
-      // if (i > 0 && stack[i-1]->name == "textnode") {
-      // if (i > 0 && strcmp(stack[i-1]->name, "textnode") == 0) {
-      //   printf("mamam\n");
-      //   stack[stack_size] = NULL;
-      //   stack_size--;
-      //   i--;
-      // }
+      // перед открытием нового тега "закрываем" textnode
+      if (i > 0 && strcmp(stack[i-1]->name, "textnode") == 0) {
+        stack[stack_size] = NULL;
+        stack_size--;
+        i--;
+      }
       root = addnode(root, word);
       stack[i] = root;
       tags_stack[tags_num] = root;
@@ -315,12 +320,6 @@ int main(int argc, char **argv) {
       }
     } else {
       //textnode 1.после '>'
-      root = addnode(root, "textnode");
-      stack[i] = root;
-      tags_stack[tags_num] = root;
-      stack_size = i;
-      i++;
-      tags_num++;
       if (word[0] == '>'){
         // отделяем слово от '>'
         l = 1;
@@ -333,14 +332,26 @@ int main(int argc, char **argv) {
           gettextnode(textnode);
           strcpy(htextnode, word);
           strcat(htextnode, textnode);
-          stack[stack_size]->textnode = my_strdup(htextnode);
+          root = addnode(root, "textnode");
+          stack[i] = root;
+          tags_stack[tags_num] = root;
+          stack[i]->textnode = my_strdup(htextnode);
+          stack_size = i;
+          i++;
+          tags_num++;
         }
       } else {
         // если срока отделена от < пробелом, то:
         gettextnode(textnode);
         strcpy(htextnode, word);
         strcat(htextnode, textnode);
-        stack[stack_size]->textnode = my_strdup(htextnode);
+        root = addnode(root, "textnode");
+        stack[i] = root;
+        tags_stack[tags_num] = root;
+        stack[i]->textnode = my_strdup(htextnode);
+        stack_size = i;
+        i++;
+        tags_num++;
       }
     } 
   }
