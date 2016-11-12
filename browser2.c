@@ -221,13 +221,12 @@ int main(int argc, char **argv) {
       // открывающийся тег
     } else if ((binsearch(word, keywords, NKEYS)) >= 0) { 
       // if (i > 0 && stack[i-1]->name == "textnode") {
-      if (i > 0 && strcmp(stack[i-1]->name, "textnode") == 0) {
-        printf("mamam\n");
-        stack[stack_size] = NULL;
-        stack_size--;
-        i--;
-      }
-      printf("%d\n", i);
+      // if (i > 0 && strcmp(stack[i-1]->name, "textnode") == 0) {
+      //   printf("mamam\n");
+      //   stack[stack_size] = NULL;
+      //   stack_size--;
+      //   i--;
+      // }
       root = addnode(root, word);
       stack[i] = root;
       tags_stack[tags_num] = root;
