@@ -550,12 +550,13 @@ int main(int argc, char **argv) {
           }
         }
 
-        // отрисовка элемента
-        drawdiv(a->css->x, a->css->y - a->css->paddingtop, 
-          a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg); 
+         
         
         // текст элемента
         if (a->textnode) {
+          // отрисовка элемента
+          drawdiv(a->css->x, a->css->y - a->css->paddingtop - a->css->height, 
+            a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
           slot = face->glyph;
           diff_pen_y = (int)(a->css->fontsize*1.6);
           diff_y = (int)(a->css->fontsize*2);
@@ -583,6 +584,9 @@ int main(int argc, char **argv) {
               }
             } 
           }
+        } else {
+          drawdiv(a->css->x, a->css->y - a->css->paddingtop, 
+            a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
         }
       }
     }
