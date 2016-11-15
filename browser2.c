@@ -62,6 +62,7 @@ struct stylenode {
   int paddingbottomline;
   int x;
   int y;
+  int y0;
   int fontsize;
   int color;
 };
@@ -113,9 +114,6 @@ int main(int argc, char **argv) {
   int x = 0;
   int y = 0;
   int body_x, body_y, prev_x, prev_y;
-  int form_width = 0;
-  int form_height = 0;
-
 
   // для парсинга
   struct tnode *root;
@@ -356,11 +354,9 @@ int main(int argc, char **argv) {
     } 
   }
 
-
   for (k=0; k<i; k++) {
     printf("Error: missing %s tag\n", stack[k]->name);
   }
-
 
   x = y = body_x = body_y = 0;
   y_start = 0;
@@ -373,6 +369,7 @@ int main(int argc, char **argv) {
     
     tags_stack[k]->css->x = x;
     tags_stack[k]->css->y = y;
+    tags_stack[k]->css->y0 = y;
 
     if (!tags_stack[k]->css->bg && tags_stack[k]->parent) {
       tags_stack[k]->css->bg = tags_stack[k]->parent->css->bg;
@@ -434,17 +431,11 @@ int main(int argc, char **argv) {
     // отрисовка div с известными размерами: высота и ширина
     if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {
       // coordinates x y
-      form_height = tags_stack[k]->css->height;
-      form_width = tags_stack[k]->css->width.val;
-      y += form_height ;
-      // margin-bottom
-      if (tags_stack[k]->css->marginbottom) {
-        y += tags_stack[k]->css->marginbottom;
-        tags_stack[k]->css->y += tags_stack[k]->css->marginbottom;
-      }
+        y += tags_stack[k]->css->height;
+        printf("%s %d %d\n", tags_stack[k]->classname, tags_stack[k]->css->y0, tags_stack[k]->css->y);
     }
 
-    //отрисовка текста
+    //текст
     if (tags_stack[k]->textnode) {
       slot = face->glyph;
       /* the pen position in 26.6 cartesian space coordinates; start at .. relative to the upper left corner  */
@@ -461,16 +452,9 @@ int main(int argc, char **argv) {
       num_chars = strlen(tags_stack[k]->textnode);
       for (n1 = 0; n1 < num_chars; n1++ ) {
         if (pen.y > tags_stack[k]->css->y) {
-          if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
-            drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, diff_y, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
-          }
           tags_stack[k]->css->y += diff_y;
           tags_stack[k]->css->height += diff_y;
           y += diff_y;
-          // if (tags_stack[k]->css->y > y) {
-          //   tags_stack[k]->css->y = y;
-          //   break;
-          // }
         }
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   /* ignore errors */
@@ -483,8 +467,7 @@ int main(int argc, char **argv) {
       }
     }
 
-
-    // //padding-bottom
+    //padding-bottom
     if (tags_stack[k]->css->paddingbottom) {
       y += tags_stack[k]->css->paddingbottom;
     }
@@ -494,7 +477,7 @@ int main(int argc, char **argv) {
         y += tags_stack[k]->css->marginbottom;
       }
 
-    // дорисовка "родителей" diva
+    // отрисовка элементов
     if (!tags_stack[k]->parent) {
       // координаты точки 'потока'
       body_x = x;
@@ -506,7 +489,15 @@ int main(int argc, char **argv) {
       //старые координаты (x, y)  родителя
       prev_x = a->parent->css->x;
       prev_y = a->parent->css->y;
-      a->parent->css->y = y;
+      if (a->parent->css->height && (a->parent->css->y0 + a->parent->css->height) > y) {
+        printf("%s\n", a->classname);
+        printf("y %d\n", y);
+        printf("y0 %d\n", a->parent->css->y0);
+        printf("height %d\n", a->parent->css->height);
+        a->parent->css->y = a->parent->css->y0 + a->parent->css->height;
+      } else {
+        a->parent->css->y = y;
+      }
 
       //условие, для того чтобы блоки, у которых больше высоты окна не рисовались
       if (prev_y >= kWindowHeight-1) {
@@ -534,11 +525,16 @@ int main(int argc, char **argv) {
       }
 
       for (num_elems=u; num_elems>=0; num_elems--) {
-          drawdiv(st[num_elems]->css->x, prev_y, y-prev_y, st[num_elems]->css->width.val, st[num_elems]->css->bg);
-          st[num_elems]->css->y = y;
-          drawdiv(st[num_elems]->css->x, st[num_elems]->css->y, st[num_elems]->css->paddingbottomline ,st[num_elems]->css->width.val, st[num_elems]->css->bg);
-          if (st[num_elems]->parent) {
-            st[num_elems]->parent->css->y += st[num_elems]->css->paddingbottomline;
+          if (st[num_elems]->css->height == 0) {
+            drawdiv(st[num_elems]->css->x, prev_y, y-prev_y, st[num_elems]->css->width.val, st[num_elems]->css->bg);
+            st[num_elems]->css->y = y;
+            drawdiv(st[num_elems]->css->x, st[num_elems]->css->y, st[num_elems]->css->paddingbottomline ,st[num_elems]->css->width.val, st[num_elems]->css->bg);
+            if (st[num_elems]->parent) {
+              st[num_elems]->parent->css->y += st[num_elems]->css->paddingbottomline;
+            }
+          } else {
+            drawdiv(st[num_elems]->css->x, prev_y, 
+              st[num_elems]->css->paddingtop + st[num_elems]->css->height + st[num_elems]->css->paddingbottom, st[num_elems]->css->width.val, st[num_elems]->css->bg);
           }
       }
  
@@ -667,6 +663,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->bg = 0;
   p->css->x = 0;
   p->css->y = 0;
+  p->css->y0 = 0;
   p->css->margintop = 0;
   p->css->marginbottom = 0;
   p->css->marginleft = 0;
