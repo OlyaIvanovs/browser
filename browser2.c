@@ -406,9 +406,6 @@ int main(int argc, char **argv) {
     
     //paddingtop
     if (tags_stack[k]->css->paddingtop) {
-      if (!tags_stack[k]->parent || tags_stack[k]->parent->css->height) {
-         drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y, tags_stack[k]->css->paddingtop,tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
-      }
       tags_stack[k]->css->y += tags_stack[k]->css->paddingtop;
       y += tags_stack[k]->css->paddingtop;
     }
@@ -431,8 +428,13 @@ int main(int argc, char **argv) {
     // отрисовка div с известными размерами: высота и ширина
     if (tags_stack[k]->css->height && tags_stack[k]->css->width.val)  {
       // coordinates x y
-        y += tags_stack[k]->css->height;
-        printf("%s %d %d\n", tags_stack[k]->classname, tags_stack[k]->css->y0, tags_stack[k]->css->y);
+      y += tags_stack[k]->css->height;
+      if (tags_stack[k]->parent && tags_stack[k]->parent->css->height) {
+        int hhh = tags_stack[k]->parent->css->y0 + tags_stack[k]->parent->css->paddingtop + tags_stack[k]->parent->css->height;
+        if (tags_stack[k]->parent->css->height && (y > hhh)) {
+          y = hhh;
+        }
+      }
     }
 
     //текст
@@ -478,26 +480,12 @@ int main(int argc, char **argv) {
       }
 
     // отрисовка элементов
-    if (!tags_stack[k]->parent) {
-      // координаты точки 'потока'
-      body_x = x;
-      body_y = y;
-      drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y - tags_stack[k]->css->paddingtop, 
-            tags_stack[k]->css->paddingtop + tags_stack[k]->css->height + tags_stack[k]->css->paddingbottom, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
-    } else {
+    if (tags_stack[k]->parent) {
       a  = tags_stack[k];
       //старые координаты (x, y)  родителя
       prev_x = a->parent->css->x;
       prev_y = a->parent->css->y;
-      if (a->parent->css->height && (a->parent->css->y0 + a->parent->css->height) > y) {
-        printf("%s\n", a->classname);
-        printf("y %d\n", y);
-        printf("y0 %d\n", a->parent->css->y0);
-        printf("height %d\n", a->parent->css->height);
-        a->parent->css->y = a->parent->css->y0 + a->parent->css->height;
-      } else {
-        a->parent->css->y = y;
-      }
+      a->parent->css->y = y;
 
       //условие, для того чтобы блоки, у которых больше высоты окна не рисовались
       if (prev_y >= kWindowHeight-1) {
@@ -516,6 +504,7 @@ int main(int argc, char **argv) {
       int num_elems;
       int paddingbottomheight = 0;
       //paddingbottom; высота линии, которую дорисовываем внизу элемента paddingbottomheight (padding + marginbottom предыдущего элемента)
+      a->css->paddingbottomline = a->css->paddingbottom;
       for (num_elems=0; num_elems<=u; num_elems++) {
           paddingbottomheight += st[num_elems]->css->paddingbottom;
           if (num_elems-1 >= 0) {
@@ -523,60 +512,61 @@ int main(int argc, char **argv) {
           }          
           st[num_elems]->css->paddingbottomline = paddingbottomheight;
       }
-
+      // отрисовка родителей
       for (num_elems=u; num_elems>=0; num_elems--) {
           if (st[num_elems]->css->height == 0) {
-            drawdiv(st[num_elems]->css->x, prev_y, y-prev_y, st[num_elems]->css->width.val, st[num_elems]->css->bg);
             st[num_elems]->css->y = y;
-            drawdiv(st[num_elems]->css->x, st[num_elems]->css->y, st[num_elems]->css->paddingbottomline ,st[num_elems]->css->width.val, st[num_elems]->css->bg);
-            if (st[num_elems]->parent) {
-              st[num_elems]->parent->css->y += st[num_elems]->css->paddingbottomline;
-            }
-          } else {
-            drawdiv(st[num_elems]->css->x, prev_y, 
-              st[num_elems]->css->paddingtop + st[num_elems]->css->height + st[num_elems]->css->paddingbottom, st[num_elems]->css->width.val, st[num_elems]->css->bg);
           }
       }
  
-      // текст элемента
-      if (a->textnode) {
-        // отрисовка элемента
-        drawdiv(a->css->x, a->css->y - a->css->paddingtop - a->css->height, 
-          a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
-        slot = face->glyph;
-        diff_pen_y = (int)(a->css->fontsize*1.6);
-        diff_y = (int)(a->css->fontsize*2);
-        pen.x = a->css->x + a->css->paddingleft;
-        pen.y = a->css->y - a->css->height + diff_pen_y;
-        // если координата указателя на текст ниже координаты блока, то текст не рисуем
-        if (pen.y > a->css->y) {
-          break;
-        } 
-        error = FT_Set_Char_Size(face, a->css->fontsize * 64, 0, 100, 0);
-        if ( error ) {
-          printf("an error occurred during seting character size");
-        }
-        num_chars = strlen(a->textnode);
-        for (n1 = 0; n1 < num_chars; n1++ ) {
-          error = FT_Load_Char(face, a->textnode[n1], FT_LOAD_RENDER );
-          if ( error ) continue;   
-          drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, a->css->width.val, a->css->color);
-          pen.x += slot->advance.x/64; 
-          if ((pen.x - a->css->x) > (a->css->width.val - slot->advance.x/64 - a->css->paddingright)) {
-            pen.x = a->css->x + a->css->paddingleft;
-            pen.y += diff_pen_y;
-            if (pen.y > a->css->y) {
-              break;
-            }
-          } 
-        }
-      } else {
-        drawdiv(a->css->x, a->css->y - a->css->paddingtop, 
-          a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
-      }
+    //   // текст элемента
+    //   if (a->textnode) {
+    //     // отрисовка элемента
+    //     drawdiv(a->css->x, a->css->y - a->css->paddingtop - a->css->height, 
+    //       a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
+    //     slot = face->glyph;
+    //     diff_pen_y = (int)(a->css->fontsize*1.6);
+    //     diff_y = (int)(a->css->fontsize*2);
+    //     pen.x = a->css->x + a->css->paddingleft;
+    //     pen.y = a->css->y - a->css->height + diff_pen_y;
+    //     // если координата указателя на текст ниже координаты блока, то текст не рисуем
+    //     if (pen.y > a->css->y) {
+    //       break;
+    //     } 
+    //     error = FT_Set_Char_Size(face, a->css->fontsize * 64, 0, 100, 0);
+    //     if ( error ) {
+    //       printf("an error occurred during seting character size");
+    //     }
+    //     num_chars = strlen(a->textnode);
+    //     for (n1 = 0; n1 < num_chars; n1++ ) {
+    //       error = FT_Load_Char(face, a->textnode[n1], FT_LOAD_RENDER );
+    //       if ( error ) continue;   
+    //       drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, a->css->width.val, a->css->color);
+    //       pen.x += slot->advance.x/64; 
+    //       if ((pen.x - a->css->x) > (a->css->width.val - slot->advance.x/64 - a->css->paddingright)) {
+    //         pen.x = a->css->x + a->css->paddingleft;
+    //         pen.y += diff_pen_y;
+    //         if (pen.y > a->css->y) {
+    //           break;
+    //         }
+    //       } 
+    //     }
+    //   } else {
+    //     drawdiv(a->css->x, a->css->y - a->css->paddingtop, 
+    //       a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
+    //   }
     }
   }
 
+  for (k=0; k<tags_num; k++) {
+    int all_height;
+    if (tags_stack[k]->css->height) {
+      all_height = tags_stack[k]->css->paddingtop + tags_stack[k]->css->height + tags_stack[k]->css->paddingbottom;
+    } else {
+      all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 + tags_stack[k]->css->paddingbottomline;
+    }
+    drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0, all_height, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+  }
   
   gRunning = 1;
   while (gRunning) {
