@@ -404,26 +404,34 @@ int main(int argc, char **argv) {
         tags_stack[k]->css->width.val += (tags_stack[k]->css->paddingleft + tags_stack[k]->css->paddingright);
       }
     }
-    
-    //paddingtop
-    if (tags_stack[k]->css->paddingtop) {
-      tags_stack[k]->css->y += tags_stack[k]->css->paddingtop;
-      y += tags_stack[k]->css->paddingtop;
-    }
 
     //margin-top
     int marg;
+    marg = 0;
     if (tags_stack[k]->css->margintop) {
       //Problem: The margins of adjacent siblings are collapsed 
       if (k >= 1 && (tags_stack[k]->parent == tags_stack[k-1]->parent) && 
         !tags_stack[k-1]->css->paddingbottom && !tags_stack[k]->css->paddingtop 
         && tags_stack[k-1]->css->marginbottom) {
         marg = (tags_stack[k-1]->css->marginbottom >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - tags_stack[k-1]->css->marginbottom); 
+      // Collapsing Margins Between Parent and Child Elements . Only the largest margin applies 
+      // the top margin of a block level element will always collapse with the top-margin of its first in-flow block level child 
+      // if there is no border, padding, clearance or line boxes separating them.
+      } else if (tags_stack[k]->parent && (tags_stack[k]->css->y0 == tags_stack[k]->parent->css->y0)) {
+        marg = (tags_stack[k]->parent->css->margintop >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - tags_stack[k]->parent->css->margintop); 
+        tags_stack[k]->parent->css->y0 += marg;
       } else {
         marg = tags_stack[k]->css->margintop;
       }
-      y += marg;
+      tags_stack[k]->css->y0 += marg;
       tags_stack[k]->css->y += marg;
+      y += marg;
+    }
+
+    //paddingtop
+    if (tags_stack[k]->css->paddingtop) {
+      tags_stack[k]->css->y += tags_stack[k]->css->paddingtop;
+      y += tags_stack[k]->css->paddingtop;
     }
 
     // отрисовка div с известными размерами: высота и ширина
