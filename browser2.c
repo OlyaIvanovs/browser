@@ -63,6 +63,7 @@ struct stylenode {
   int x;
   int y;
   int y0;
+  int y1;
   int fontsize;
   int color;
 };
@@ -113,7 +114,7 @@ int main(int argc, char **argv) {
 
   int x = 0;
   int y = 0;
-  int body_x, body_y, prev_x, prev_y;
+  int body_x, body_y;
 
   // для парсинга
   struct tnode *root;
@@ -482,13 +483,13 @@ int main(int argc, char **argv) {
     // отрисовка элементов
     if (tags_stack[k]->parent) {
       a  = tags_stack[k];
-      //старые координаты (x, y)  родителя
-      prev_x = a->parent->css->x;
-      prev_y = a->parent->css->y;
       a->parent->css->y = y;
+      if (a->parent->css->height) {
+        y = a->parent->css->y0 + a->parent->css->paddingtop + a->parent->css->height;
+      }
 
       //условие, для того чтобы блоки, у которых больше высоты окна не рисовались
-      if (prev_y >= kWindowHeight-1) {
+      if (a->parent->css->y >= kWindowHeight-1) {
         break;
       }
 
@@ -516,45 +517,11 @@ int main(int argc, char **argv) {
       for (num_elems=u; num_elems>=0; num_elems--) {
           if (st[num_elems]->css->height == 0) {
             st[num_elems]->css->y = y;
+            if (num_elems >= 1) {
+              st[num_elems]->css->y += st[num_elems-1]->css->paddingbottomline;
+            }
           }
       }
- 
-    //   // текст элемента
-    //   if (a->textnode) {
-    //     // отрисовка элемента
-    //     drawdiv(a->css->x, a->css->y - a->css->paddingtop - a->css->height, 
-    //       a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
-    //     slot = face->glyph;
-    //     diff_pen_y = (int)(a->css->fontsize*1.6);
-    //     diff_y = (int)(a->css->fontsize*2);
-    //     pen.x = a->css->x + a->css->paddingleft;
-    //     pen.y = a->css->y - a->css->height + diff_pen_y;
-    //     // если координата указателя на текст ниже координаты блока, то текст не рисуем
-    //     if (pen.y > a->css->y) {
-    //       break;
-    //     } 
-    //     error = FT_Set_Char_Size(face, a->css->fontsize * 64, 0, 100, 0);
-    //     if ( error ) {
-    //       printf("an error occurred during seting character size");
-    //     }
-    //     num_chars = strlen(a->textnode);
-    //     for (n1 = 0; n1 < num_chars; n1++ ) {
-    //       error = FT_Load_Char(face, a->textnode[n1], FT_LOAD_RENDER );
-    //       if ( error ) continue;   
-    //       drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, a->css->width.val, a->css->color);
-    //       pen.x += slot->advance.x/64; 
-    //       if ((pen.x - a->css->x) > (a->css->width.val - slot->advance.x/64 - a->css->paddingright)) {
-    //         pen.x = a->css->x + a->css->paddingleft;
-    //         pen.y += diff_pen_y;
-    //         if (pen.y > a->css->y) {
-    //           break;
-    //         }
-    //       } 
-    //     }
-    //   } else {
-    //     drawdiv(a->css->x, a->css->y - a->css->paddingtop, 
-    //       a->css->paddingtop + a->css->height + a->css->paddingbottom, a->css->width.val, a->css->bg);
-    //   }
     }
   }
 
@@ -563,9 +530,39 @@ int main(int argc, char **argv) {
     if (tags_stack[k]->css->height) {
       all_height = tags_stack[k]->css->paddingtop + tags_stack[k]->css->height + tags_stack[k]->css->paddingbottom;
     } else {
-      all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 + tags_stack[k]->css->paddingbottomline;
+      all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 + tags_stack[k]->css->paddingbottom;
     }
     drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0, all_height, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+    // текст элемента
+    if (tags_stack[k]->textnode) {
+      slot = face->glyph;
+      diff_pen_y = (int)(tags_stack[k]->css->fontsize*1.6);
+      diff_y = (int)(tags_stack[k]->css->fontsize*2);
+      pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
+      pen.y = tags_stack[k]->css->y - tags_stack[k]->css->height + diff_pen_y;
+      // если координата указателя на текст ниже координаты блока, то текст не рисуем
+      if (pen.y > tags_stack[k]->css->y) {
+        break;
+      } 
+      error = FT_Set_Char_Size(face, tags_stack[k]->css->fontsize * 64, 0, 100, 0);
+      if ( error ) {
+        printf("an error occurred during seting character size");
+      }
+      num_chars = strlen(tags_stack[k]->textnode);
+      for (n1 = 0; n1 < num_chars; n1++ ) {
+        error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
+        if ( error ) continue;   
+        drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+        pen.x += slot->advance.x/64; 
+        if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64 - tags_stack[k]->css->paddingright)) {
+          pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
+          pen.y += diff_pen_y;
+          if (pen.y > tags_stack[k]->css->y) {
+            break;
+          }
+        } 
+      }
+    }
   }
   
   gRunning = 1;
@@ -654,6 +651,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->x = 0;
   p->css->y = 0;
   p->css->y0 = 0;
+  p->css->y1 = 0;
   p->css->margintop = 0;
   p->css->marginbottom = 0;
   p->css->marginleft = 0;
