@@ -512,16 +512,13 @@ int main(int argc, char **argv) {
 
       int num_elems;
       int paddingbottomheight = 0;
-      //paddingbottom; высота линии, которую дорисовываем внизу элемента paddingbottomheight (padding + marginbottom предыдущего элемента)
+      //paddingbottom; высота линии, которую дорисовываем внизу элемента
       a->css->paddingbottomline = a->css->paddingbottom;
       for (num_elems=0; num_elems<=u; num_elems++) {
-          paddingbottomheight += st[num_elems]->css->paddingbottom;
-          if (num_elems-1 >= 0) {
-            paddingbottomheight += st[num_elems-1]->css->marginbottom;
-          }          
+          paddingbottomheight += st[num_elems]->css->paddingbottom + st[num_elems]->css->marginbottom;       
           st[num_elems]->css->paddingbottomline = paddingbottomheight;
       }
-      // отрисовка родителей
+
       for (num_elems=u; num_elems>=0; num_elems--) {
           if (st[num_elems]->css->height == 0) {
             st[num_elems]->css->y = y;
