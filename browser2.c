@@ -409,11 +409,22 @@ int main(int argc, char **argv) {
     int marg;
     marg = 0;
     if (tags_stack[k]->css->margintop) {
+      int prev_sibling_marginbottom = 0;
+      // find previous adjacent sibling
+      if (k >= 1){
+        for (int u = k-1; u > 0 ; u--){
+          if (tags_stack[u] == tags_stack[k]->parent) {
+            break;
+          }
+          if (tags_stack[u]->parent == tags_stack[k]->parent) {
+            prev_sibling_marginbottom = tags_stack[u]->css->marginbottom;
+          }
+        }
+      }
+      
       //Problem: The margins of adjacent siblings are collapsed 
-      if (k >= 1 && (tags_stack[k]->parent == tags_stack[k-1]->parent) && 
-        !tags_stack[k-1]->css->paddingbottom && !tags_stack[k]->css->paddingtop 
-        && tags_stack[k-1]->css->marginbottom) {
-        marg = (tags_stack[k-1]->css->marginbottom >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - tags_stack[k-1]->css->marginbottom); 
+      if (prev_sibling_marginbottom) {
+        marg = (prev_sibling_marginbottom >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - prev_sibling_marginbottom); 
       // Collapsing Margins Between Parent and Child Elements . Only the largest margin applies 
       // the top margin of a block level element will always collapse with the top-margin of its first in-flow block level child 
       // if there is no border, padding, clearance or line boxes separating them.
@@ -515,7 +526,7 @@ int main(int argc, char **argv) {
       //paddingbottom; высота линии, которую дорисовываем внизу элемента
       a->css->paddingbottomline = a->css->paddingbottom;
       for (num_elems=0; num_elems<=u; num_elems++) {
-          paddingbottomheight += st[num_elems]->css->paddingbottom + st[num_elems]->css->marginbottom;       
+          paddingbottomheight += st[num_elems]->css->paddingbottom + st[num_elems]->css->marginbottom;; 
           st[num_elems]->css->paddingbottomline = paddingbottomheight;
       }
 
