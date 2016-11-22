@@ -66,6 +66,8 @@ struct stylenode {
   int y1;
   int fontsize;
   int color;
+  int borderwidth;
+  int bordercolor;
 };
 
 struct tnode {
@@ -91,7 +93,7 @@ int binsearch(char *word, char *keywords[], int n);
 char *my_strdup(char *s);
 struct tnode *talloc(void);
 struct stylenode *salloc(void);
-void drawdiv(int x, int y, int height, int width, int bg);
+void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor);
 void drawtext(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color);
 
 
@@ -312,6 +314,19 @@ int main(int argc, char **argv) {
                 index++;
               } else if (index == 3) {
                 stack[stack_size]->css->paddingleft = atoi(word);
+              }
+            }
+          }
+        } else if (strcmp("border", word) == 0){
+          index = 0;
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              if (index == 0) {
+                stack[stack_size]->css->borderwidth = atoi(word);
+                index++;
+              } else if (index == 1) {
+                stack[stack_size]->css->bordercolor = (int)strtol(word, NULL, 16);
+                index++;
               }
             }
           }
@@ -548,7 +563,7 @@ int main(int argc, char **argv) {
     } else {
       all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 + tags_stack[k]->css->paddingbottom;
     }
-    drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0, all_height, tags_stack[k]->css->width.val, tags_stack[k]->css->bg);
+    drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0, all_height, tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor);
     // текст элемента
     if (tags_stack[k]->textnode) {
       slot = face->glyph;
@@ -608,22 +623,52 @@ int main(int argc, char **argv) {
 }
 
 
-void drawdiv(int x, int y, int height, int width, int bg) {
+void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
   uint32_t *pixel_data = (uint32_t *)gXImage->data;
-  int v, z;
+  int v, z, z1, z2;
 
   // отрисовка квадрата
   if (y >= kWindowHeight-1) {
     return;
   }
   pixel_data = pixel_data + (kWindowWidth * y) + x;
+  // border-top
+  if (borderwidth) {
+    for (v = 0; v < borderwidth; v++) {
+      for (z = 0; z < width + borderwidth*2; z++) {
+        *(pixel_data + z) = bordercolor;
+      }
+      pixel_data = pixel_data + kWindowWidth;
+      if (y + v >= kWindowHeight-1) {
+        return;
+      }
+    }
+  }
   for (v = 0; v < height; v++) {
+    for (z1 = 0; z1 < borderwidth; z1++) {
+      *(pixel_data + z1) = bordercolor;
+    }
     for (z = 0; z < width; z++) {
-      *(pixel_data + z) = bg;
+      *(pixel_data + z1 + z) = bg;
+    }
+    for (z2 = 0; z2 < borderwidth; z2++) {
+      *(pixel_data + z1 + z + z2) = bordercolor;
     }
     pixel_data = pixel_data + kWindowWidth;
     if (y + v >= kWindowHeight-1) {
       return;
+    }
+  }
+  // border-bottom
+  if (borderwidth) {
+    for (v = 0; v < borderwidth; v++) {
+      for (z = 0; z < width + borderwidth*2; z++) {
+        *(pixel_data + z) = bordercolor;
+      }
+      pixel_data = pixel_data + kWindowWidth;
+      if (y + v >= kWindowHeight-1) {
+        return;
+      }
     }
   }
 }
@@ -677,6 +722,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->paddingleft = 0;
   p->css->paddingright = 0; 
   p->css->fontsize = 20;
+  p->css->borderwidth = 0;
   // p->css->bg = 0xFFFFFF;
   return p;
 }
