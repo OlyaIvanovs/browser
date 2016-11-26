@@ -325,6 +325,8 @@ int main(int argc, char **argv) {
                 stack[stack_size]->css->borderwidth = atoi(word);
                 index++;
               } else if (index == 1) {
+                index++;
+              } else if (index == 2) {
                 stack[stack_size]->css->bordercolor = (int)strtol(word, NULL, 16);
                 index++;
               }
@@ -379,7 +381,7 @@ int main(int argc, char **argv) {
   // draw html elements
   for (k=0; k<tags_num; k++) {
     if (tags_stack[k]->parent) {
-      x = tags_stack[k]->parent->css->x;
+      x = tags_stack[k]->parent->css->x + tags_stack[k]->parent->css->borderwidth;
       y = tags_stack[k]->parent->css->y;
     } 
     
@@ -402,7 +404,7 @@ int main(int argc, char **argv) {
     // если ширина не указана, растяшиваем блок на ширину родителя
     if (tags_stack[k]->css->width.val == 0) {
        if (tags_stack[k]->parent) {
-        tags_stack[k]->css->width.val = tags_stack[k]->parent->css->width.val;
+        tags_stack[k]->css->width.val = tags_stack[k]->parent->css->width.val - tags_stack[k]->css->borderwidth*2;
         // изменяем ширину если есть padding
         if (tags_stack[k]->parent->css->paddingleft || tags_stack[k]->parent->css->paddingright) {
             tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
@@ -412,7 +414,7 @@ int main(int argc, char **argv) {
           tags_stack[k]->css->width.val -= (tags_stack[k]->css->marginleft + tags_stack[k]->css->marginright);
         }
       } else {
-        tags_stack[k]->css->width.val = kWindowWidth;
+        tags_stack[k]->css->width.val = kWindowWidth - tags_stack[k]->css->borderwidth*2;
       }
     } else if ((tags_stack[k]->parent && tags_stack[k]->css->width.val < tags_stack[k]->parent->css->width.val) || (tags_stack[k]->css->width.val < kWindowWidth)) {
       if (tags_stack[k]->css->paddingleft || tags_stack[k]->css->paddingright) {
@@ -454,6 +456,12 @@ int main(int argc, char **argv) {
       y += marg;
     }
 
+    //bordertop
+    if (tags_stack[k]->css->borderwidth) {
+      tags_stack[k]->css->y += tags_stack[k]->css->borderwidth;
+      y += tags_stack[k]->css->borderwidth;
+    }
+
     //paddingtop
     if (tags_stack[k]->css->paddingtop) {
       tags_stack[k]->css->y += tags_stack[k]->css->paddingtop;
@@ -465,7 +473,8 @@ int main(int argc, char **argv) {
       // coordinates x y
       y += tags_stack[k]->css->height;
       if (tags_stack[k]->parent && tags_stack[k]->parent->css->height) {
-        int hhh = tags_stack[k]->parent->css->y0 + tags_stack[k]->parent->css->paddingtop + tags_stack[k]->parent->css->height;
+        int hhh = tags_stack[k]->parent->css->y0 + tags_stack[k]->parent->css->borderwidth*2 + 
+          tags_stack[k]->parent->css->paddingtop + tags_stack[k]->parent->css->height;
         if (tags_stack[k]->parent->css->height && (y > hhh)) {
           y = hhh;
         }
@@ -509,6 +518,10 @@ int main(int argc, char **argv) {
       y += tags_stack[k]->css->paddingbottom;
     }
 
+    if (tags_stack[k]->css->borderwidth) {
+      y += tags_stack[k]->css->borderwidth;
+    }
+
     //margin-bottom
     if (tags_stack[k]->css->marginbottom) {
         y += tags_stack[k]->css->marginbottom;
@@ -519,7 +532,7 @@ int main(int argc, char **argv) {
       a  = tags_stack[k];
       a->parent->css->y = y;
       if (a->parent->css->height) {
-        y = a->parent->css->y0 + a->parent->css->paddingtop + a->parent->css->height;
+        y = a->parent->css->y0 + a->parent->css->borderwidth + a->parent->css->paddingtop + a->parent->css->height;
       }
 
       //условие, для того чтобы блоки, у которых больше высоты окна не рисовались
@@ -539,9 +552,9 @@ int main(int argc, char **argv) {
       int num_elems;
       int paddingbottomheight = 0;
       //paddingbottom; высота линии, которую дорисовываем внизу элемента
-      a->css->paddingbottomline = a->css->paddingbottom;
+      a->css->paddingbottomline = a->css->paddingbottom + a->css->borderwidth;
       for (num_elems=0; num_elems<=u; num_elems++) {
-          paddingbottomheight += st[num_elems]->css->paddingbottom + st[num_elems]->css->marginbottom;; 
+          paddingbottomheight += st[num_elems]->css->paddingbottom + st[num_elems]->css->marginbottom + st[num_elems]->css->borderwidth; 
           st[num_elems]->css->paddingbottomline = paddingbottomheight;
       }
 
@@ -631,6 +644,7 @@ void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int b
   if (y >= kWindowHeight-1) {
     return;
   }
+
   pixel_data = pixel_data + (kWindowWidth * y) + x;
   // border-top
   if (borderwidth) {
