@@ -21,7 +21,6 @@ static const int formWidth = 500;
 static const int formHeight = 500;
 static XImage *gXImage;
 static int stack_size;
-static int y_start;
 
 
 #define Assert(Expression) if (!(Expression)) {*(int *)0 = 0;}
@@ -115,7 +114,7 @@ int main(int argc, char **argv) {
   int bg_color = WhitePixel(display, screen);
 
   int x = 0;
-  int y = 0;
+  int y = -100;
   int body_x, body_y;
 
   // для парсинга
@@ -377,7 +376,7 @@ int main(int argc, char **argv) {
   }
 
   x = y = body_x = body_y = 0;
-  y_start = 0;
+  y = -200;
   // draw html elements
   for (k=0; k<tags_num; k++) {
     if (tags_stack[k]->parent) {
@@ -529,17 +528,14 @@ int main(int argc, char **argv) {
       y += tags_stack[k]->css->paddingbottom;
     }
 
-    printf("%d\n", y);
     if (tags_stack[k]->css->borderwidth) {
-      printf("border %d\n", tags_stack[k]->css->borderwidth);
       y += tags_stack[k]->css->borderwidth;
     }
-    printf("%d\n", y);
+
     //margin-bottom
     if (tags_stack[k]->css->marginbottom) {
         y += tags_stack[k]->css->marginbottom;
       }
-    printf("%d\n", y);
 
     // отрисовка элементов
     if (tags_stack[k]->parent) {
@@ -610,7 +606,7 @@ int main(int argc, char **argv) {
       for (n1 = 0; n1 < num_chars; n1++ ) {
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   
-        drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+        // drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
         pen.x += slot->advance.x/64; 
         if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64 - tags_stack[k]->css->paddingright)) {
           pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
@@ -652,14 +648,20 @@ int main(int argc, char **argv) {
 
 void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
   uint32_t *pixel_data = (uint32_t *)gXImage->data;
-  int v, z, z1, z2;
+  int v, z, z2;
+  int z1 = 0;
 
   // отрисовка квадрата
   if (y >= kWindowHeight-1) {
     return;
   }
 
-  pixel_data = pixel_data + (kWindowWidth * y) + x;
+  if (y < 0) {
+    pixel_data = pixel_data + x;
+  }
+  else {
+    pixel_data = pixel_data + (kWindowWidth * y) + x;
+  }
   // border-top
   if (borderwidth) {
     for (v = 0; v < borderwidth; v++) {
@@ -673,19 +675,26 @@ void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int b
     }
   }
   for (v = 0; v < height; v++) {
-    for (z1 = 0; z1 < borderwidth; z1++) {
-      *(pixel_data + z1) = bordercolor;
+    if ((y + v) <= 0) {
+      continue;
+    } 
+    if (borderwidth) {
+      for (z1 = 0; z1 < borderwidth; z1++) {
+        *(pixel_data + z1) = bordercolor;
+      }
     }
     for (z = 0; z < width; z++) {
       *(pixel_data + z1 + z) = bg;
     }
-    for (z2 = 0; z2 < borderwidth; z2++) {
-      *(pixel_data + z1 + z + z2) = bordercolor;
+    if (borderwidth) {
+      for (z2 = 0; z2 < borderwidth; z2++) {
+        *(pixel_data + z1 + z + z2) = bordercolor;
+      }
     }
     pixel_data = pixel_data + kWindowWidth;
-    if (y + v >= kWindowHeight-1) {
-      return;
-    }
+    // if (y + v >= kWindowHeight-1) {
+    //   return;
+    // }
   }
   // border-bottom
   if (borderwidth) {
