@@ -393,6 +393,16 @@ int main(int argc, char **argv) {
       tags_stack[k]->css->bg = tags_stack[k]->parent->css->bg;
     }
 
+    if (!tags_stack[k]->css->fontsize && tags_stack[k]->parent) {
+      tags_stack[k]->css->fontsize = tags_stack[k]->parent->css->fontsize;
+    } else if (!tags_stack[k]->css->fontsize) {
+      tags_stack[k]->css->fontsize = 20;
+    }
+
+    if (!tags_stack[k]->css->color && tags_stack[k]->parent) {
+      tags_stack[k]->css->color = tags_stack[k]->parent->css->color;
+    }
+
     // если ест padding у родителя делаем отступ для элемента
     if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft) {
         tags_stack[k]->css->x += tags_stack[k]->parent->css->paddingleft;
@@ -435,6 +445,7 @@ int main(int argc, char **argv) {
           }
           if (tags_stack[u]->parent == tags_stack[k]->parent) {
             prev_sibling_marginbottom = tags_stack[u]->css->marginbottom;
+            break;
           }
         }
       }
@@ -518,14 +529,17 @@ int main(int argc, char **argv) {
       y += tags_stack[k]->css->paddingbottom;
     }
 
+    printf("%d\n", y);
     if (tags_stack[k]->css->borderwidth) {
+      printf("border %d\n", tags_stack[k]->css->borderwidth);
       y += tags_stack[k]->css->borderwidth;
     }
-
+    printf("%d\n", y);
     //margin-bottom
     if (tags_stack[k]->css->marginbottom) {
         y += tags_stack[k]->css->marginbottom;
       }
+    printf("%d\n", y);
 
     // отрисовка элементов
     if (tags_stack[k]->parent) {
@@ -574,7 +588,7 @@ int main(int argc, char **argv) {
     if (tags_stack[k]->css->height) {
       all_height = tags_stack[k]->css->paddingtop + tags_stack[k]->css->height + tags_stack[k]->css->paddingbottom;
     } else {
-      all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 + tags_stack[k]->css->paddingbottom;
+      all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 - tags_stack[k]->css->borderwidth + tags_stack[k]->css->paddingbottom ;
     }
     drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0, all_height, tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor);
     // текст элемента
@@ -735,7 +749,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->paddingbottom = 0;
   p->css->paddingleft = 0;
   p->css->paddingright = 0; 
-  p->css->fontsize = 20;
+  p->css->fontsize = 0;
   p->css->borderwidth = 0;
   // p->css->bg = 0xFFFFFF;
   return p;
