@@ -67,6 +67,7 @@ struct stylenode {
   int color;
   int borderwidth;
   int bordercolor;
+  int all_height;
 };
 
 struct tnode {
@@ -112,10 +113,7 @@ int main(int argc, char **argv) {
   int screen = DefaultScreen(display);
   int border_color = WhitePixel(display, screen);
   int bg_color = WhitePixel(display, screen);
-
-  int x = 0;
-  int y = -100;
-  int body_x, body_y;
+  int body_x, body_y, x, y;
 
   // для парсинга
   struct tnode *root;
@@ -376,7 +374,6 @@ int main(int argc, char **argv) {
   }
 
   x = y = body_x = body_y = 0;
-  y = -200;
   // draw html elements
   for (k=0; k<tags_num; k++) {
     if (tags_stack[k]->parent) {
@@ -586,7 +583,8 @@ int main(int argc, char **argv) {
     } else {
       all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 - tags_stack[k]->css->borderwidth + tags_stack[k]->css->paddingbottom ;
     }
-    drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0, all_height, tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor);
+    tags_stack[k]->css->all_height = all_height;
+
     // текст элемента
     if (tags_stack[k]->textnode) {
       slot = face->glyph;
@@ -620,6 +618,7 @@ int main(int argc, char **argv) {
   }
   
   gRunning = 1;
+  int y_start = 0;
   while (gRunning) {
     // Process events
 
@@ -632,6 +631,19 @@ int main(int argc, char **argv) {
         if (event.xclient.data.l[0] == wmDeleteMessage) {
           gRunning = 0;
         }
+      }
+
+      if (event.type == ButtonPressMask) {
+        if (event.xbutton.button == 4) {
+          y_start += 10;
+        } else if (event.xbutton.button == 5) {
+          y_start -= 10;
+        }
+      }
+
+      for (k=0; k<tags_num; k++) {
+        drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0 + y_start, tags_stack[k]->css->all_height,
+         tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
       }
     }
 
@@ -760,6 +772,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->paddingright = 0; 
   p->css->fontsize = 0;
   p->css->borderwidth = 0;
+  p->css->all_height = 0;
   // p->css->bg = 0xFFFFFF;
   return p;
 }
