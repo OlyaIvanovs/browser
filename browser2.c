@@ -15,7 +15,7 @@
 static int gRunning;
 // windows parameters
 static const int kWindowWidth = 1500;
-static const int kWindowHeight = 1000;
+static const int kWindowHeight = 800;
 // form parameters
 static const int formWidth = 500;
 static const int formHeight = 500;
@@ -94,9 +94,12 @@ char *my_strdup(char *s);
 struct tnode *talloc(void);
 struct stylenode *salloc(void);
 void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor);
+void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor);
 void drawtext(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color);
-
-
+void draw_bitmap(void);
+//buffer
+static int *buf_p;
+static int *buf_p1;
 
 
 int main(int argc, char **argv) {
@@ -531,8 +534,8 @@ int main(int argc, char **argv) {
 
     //margin-bottom
     if (tags_stack[k]->css->marginbottom) {
-        y += tags_stack[k]->css->marginbottom;
-      }
+      y += tags_stack[k]->css->marginbottom;
+    }
 
     // отрисовка элементов
     if (tags_stack[k]->parent) {
@@ -566,15 +569,24 @@ int main(int argc, char **argv) {
       }
 
       for (num_elems=u; num_elems>=0; num_elems--) {
-          if (st[num_elems]->css->height == 0) {
-            st[num_elems]->css->y = y;
-            if (num_elems >= 1) {
-              st[num_elems]->css->y += st[num_elems-1]->css->paddingbottomline;
-            }
+        if (st[num_elems]->css->height == 0) {
+          st[num_elems]->css->y = y;
+          if (num_elems >= 1) {
+            st[num_elems]->css->y += st[num_elems-1]->css->paddingbottomline;
           }
+        }
       }
     }
   }
+
+  //buffer for bitmap
+  int buf_size = kWindowWidth * tags_stack[0]->css->y;
+  buf_p = (int *)malloc(buf_size * sizeof(int));
+  buf_p1 = buf_p;
+  for (int k = 0; k < buf_size; k++) {
+    buf_p[k] = 1;
+  }
+
 
   for (k=0; k<tags_num; k++) {
     int all_height;
@@ -584,6 +596,11 @@ int main(int argc, char **argv) {
       all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 - tags_stack[k]->css->borderwidth + tags_stack[k]->css->paddingbottom ;
     }
     tags_stack[k]->css->all_height = all_height;
+    // drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0, tags_stack[k]->css->all_height,
+    //        tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
+    bitmap_div(tags_stack[k]->css->x, tags_stack[k]->css->y0, tags_stack[k]->css->all_height,
+           tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
+    draw_bitmap();
 
     // текст элемента
     if (tags_stack[k]->textnode) {
@@ -604,7 +621,7 @@ int main(int argc, char **argv) {
       for (n1 = 0; n1 < num_chars; n1++ ) {
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   
-        // drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+        drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
         pen.x += slot->advance.x/64; 
         if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64 - tags_stack[k]->css->paddingright)) {
           pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
@@ -619,6 +636,7 @@ int main(int argc, char **argv) {
   
   gRunning = 1;
   int y_start = 0;
+  int mouse_scroll = 1;
   while (gRunning) {
     // Process events
 
@@ -635,16 +653,25 @@ int main(int argc, char **argv) {
 
       if (event.type == ButtonPressMask) {
         if (event.xbutton.button == 4) {
-          y_start += 10;
+          y_start += 5;
         } else if (event.xbutton.button == 5) {
-          y_start -= 10;
+          y_start -= 5;
         }
+        mouse_scroll = 1;
       }
 
-      for (k=0; k<tags_num; k++) {
-        drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0 + y_start, tags_stack[k]->css->all_height,
-         tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
-      }
+      // if (mouse_scroll) {
+      //   //clear window
+      //   uint32_t *pixel_data = (uint32_t *)gXImage->data;
+      //   for (int pixel = 0; pixel < kWindowHeight * kWindowWidth; pixel++) {
+      //     *(pixel_data + pixel) = 0xFFFFFF;
+      //   }
+      //   for (k=0; k<tags_num; k++) {
+      //     drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0 + y_start, tags_stack[k]->css->all_height,
+      //      tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
+      //     mouse_scroll = 0;
+      //   }
+      //}
     }
 
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
@@ -657,13 +684,111 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-
 void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
   uint32_t *pixel_data = (uint32_t *)gXImage->data;
   int v, z, z2;
   int z1 = 0;
 
-  // отрисовка квадрата
+  pixel_data = pixel_data + (kWindowWidth * y) + x;
+  // border-top
+  if (borderwidth) {
+    for (v = 0; v < borderwidth; v++) {
+      for (z = 0; z < width + borderwidth*2; z++) {
+        *(pixel_data + z) = bordercolor;
+      }
+      pixel_data = pixel_data + kWindowWidth;
+    }
+  }
+  for (v = 0; v < height; v++) {
+    if (borderwidth) {
+      for (z1 = 0; z1 < borderwidth; z1++) {
+        *(pixel_data + z1) = bordercolor;
+      }
+    }
+    for (z = 0; z < width; z++) {
+      *(pixel_data + z1 + z) = bg;
+    }
+    if (borderwidth) {
+      for (z2 = 0; z2 < borderwidth; z2++) {
+        *(pixel_data + z1 + z + z2) = bordercolor;
+      }
+    }
+    pixel_data = pixel_data + kWindowWidth;
+  }
+  // border-bottom
+  if (borderwidth) {
+    for (v = 0; v < borderwidth; v++) {
+      for (z = 0; z < width + borderwidth*2; z++) {
+        *(pixel_data + z) = bordercolor;
+      }
+      pixel_data = pixel_data + kWindowWidth;
+    }
+  }
+}
+
+void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
+  int v, z, z2;
+  int z1 = 0;
+  buf_p = buf_p1;
+
+  buf_p = buf_p + (kWindowWidth * y) + x;
+  if (borderwidth) {
+    for (v = 0; v < borderwidth; v++) {
+      for (z = 0; z < width + borderwidth*2; z++) {
+        *(buf_p + z) = bordercolor;
+      }
+      buf_p = buf_p + kWindowWidth;
+    }
+  }
+  for (v = 0; v < height; v++) { 
+    if (borderwidth) {
+      for (z1 = 0; z1 < borderwidth; z1++) {
+        *(buf_p + z1) = bordercolor;
+      }
+    }
+    for (z = 0; z < width; z++) {
+      *(buf_p + z) = 1;
+    }
+    if (borderwidth) {
+      for (z2 = 0; z2 < borderwidth; z2++) {
+        *(buf_p + z1 + z + z2) = bordercolor;
+      }
+    }
+    buf_p = buf_p + kWindowWidth;
+  }
+  // border-bottom
+  if (borderwidth) {
+    for (v = 0; v < borderwidth; v++) {
+      for (z = 0; z < width + borderwidth*2; z++) {
+        *(buf_p + z) = bordercolor;
+      }
+      buf_p = buf_p + kWindowWidth;
+    }
+  }
+}
+
+void draw_bitmap() {
+  uint32_t *pixel_data = (uint32_t *)gXImage->data;
+  buf_p = buf_p1;
+
+  for (int n = 0; n < kWindowWidth*kWindowHeight; n++) {
+    *(pixel_data + n) = 1;
+  }
+
+/*  for (i = x, p = 0; i < x_max; i++, p++) {
+    for (j = y, q = 0; j < y_max; j++, q++) {
+      if (i < 0 || j < 0 || i >= WIDTH || j >= HEIGHT) continue;
+
+      image[j][i] = bitmap->buffer[q * bitmap->width + p];
+    }
+  }*/
+}
+
+void drawdiv1(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
+  uint32_t *pixel_data = (uint32_t *)gXImage->data;
+  int v, z, z2;
+  int z1 = 0;
+
   if (y >= kWindowHeight-1) {
     return;
   }
@@ -704,9 +829,9 @@ void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int b
       }
     }
     pixel_data = pixel_data + kWindowWidth;
-    // if (y + v >= kWindowHeight-1) {
-    //   return;
-    // }
+    if (y + v >= kWindowHeight-1) {
+      return;
+    }
   }
   // border-bottom
   if (borderwidth) {
