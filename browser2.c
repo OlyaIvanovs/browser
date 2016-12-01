@@ -93,13 +93,13 @@ int binsearch(char *word, char *keywords[], int n);
 char *my_strdup(char *s);
 struct tnode *talloc(void);
 struct stylenode *salloc(void);
-void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor);
 void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor);
 void drawtext(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color);
-void draw_bitmap(void);
+void draw_bitmap(int y);
 //buffer
 static int *buf_p;
 static int *buf_p1;
+static int buf_size;
 
 
 int main(int argc, char **argv) {
@@ -545,11 +545,6 @@ int main(int argc, char **argv) {
         y = a->parent->css->y0 + a->parent->css->borderwidth + a->parent->css->paddingtop + a->parent->css->height;
       }
 
-      //условие, для того чтобы блоки, у которых больше высоты окна не рисовались
-      if (a->parent->css->y >= kWindowHeight-1) {
-        break;
-      }
-
       // находим всех родителей и перерисовываем их
       u = 0;
       b = a->parent;
@@ -580,7 +575,7 @@ int main(int argc, char **argv) {
   }
 
   //buffer for bitmap
-  int buf_size = kWindowWidth * tags_stack[0]->css->y;
+  buf_size = kWindowWidth * tags_stack[0]->css->y;
   buf_p = (int *)malloc(buf_size * sizeof(int));
   buf_p1 = buf_p;
   for (int k = 0; k < buf_size; k++) {
@@ -596,11 +591,10 @@ int main(int argc, char **argv) {
       all_height = tags_stack[k]->css->y - tags_stack[k]->css->y0 - tags_stack[k]->css->borderwidth + tags_stack[k]->css->paddingbottom ;
     }
     tags_stack[k]->css->all_height = all_height;
-    // drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0, tags_stack[k]->css->all_height,
-    //        tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
+
     bitmap_div(tags_stack[k]->css->x, tags_stack[k]->css->y0, tags_stack[k]->css->all_height,
            tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
-    draw_bitmap();
+    draw_bitmap(0);
 
     // текст элемента
     if (tags_stack[k]->textnode) {
@@ -653,25 +647,28 @@ int main(int argc, char **argv) {
 
       if (event.type == ButtonPressMask) {
         if (event.xbutton.button == 4) {
-          y_start += 5;
-        } else if (event.xbutton.button == 5) {
           y_start -= 5;
+          if (y_start < 0) {
+            y_start = 0; 
+          }
+        } else if (event.xbutton.button == 5) {
+          y_start += 5;
+          if (y_start > tags_stack[0]->css->y - kWindowHeight) {
+            y_start = tags_stack[0]->css->y - kWindowHeight;
+          }
         }
         mouse_scroll = 1;
       }
 
-      // if (mouse_scroll) {
-      //   //clear window
-      //   uint32_t *pixel_data = (uint32_t *)gXImage->data;
-      //   for (int pixel = 0; pixel < kWindowHeight * kWindowWidth; pixel++) {
-      //     *(pixel_data + pixel) = 0xFFFFFF;
-      //   }
-      //   for (k=0; k<tags_num; k++) {
-      //     drawdiv(tags_stack[k]->css->x, tags_stack[k]->css->y0 + y_start, tags_stack[k]->css->all_height,
-      //      tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
-      //     mouse_scroll = 0;
-      //   }
-      //}
+      if (mouse_scroll && tags_stack[0]->css->y > kWindowHeight && y_start > 0 && y_start < (tags_stack[0]->css->y - kWindowHeight)) {
+        //clear window
+        uint32_t *pixel_data = (uint32_t *)gXImage->data;
+        for (int pixel = 0; pixel < kWindowHeight * kWindowWidth; pixel++) {
+          *(pixel_data + pixel) = 0xFFFFFF;
+        }
+        draw_bitmap(y_start);
+        mouse_scroll = 0;
+      }
     }
 
     XPutImage(display, window, gc, gXImage, 0, 0, 0, 0, kWindowWidth,
@@ -684,47 +681,6 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-void drawdiv(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
-  uint32_t *pixel_data = (uint32_t *)gXImage->data;
-  int v, z, z2;
-  int z1 = 0;
-
-  pixel_data = pixel_data + (kWindowWidth * y) + x;
-  // border-top
-  if (borderwidth) {
-    for (v = 0; v < borderwidth; v++) {
-      for (z = 0; z < width + borderwidth*2; z++) {
-        *(pixel_data + z) = bordercolor;
-      }
-      pixel_data = pixel_data + kWindowWidth;
-    }
-  }
-  for (v = 0; v < height; v++) {
-    if (borderwidth) {
-      for (z1 = 0; z1 < borderwidth; z1++) {
-        *(pixel_data + z1) = bordercolor;
-      }
-    }
-    for (z = 0; z < width; z++) {
-      *(pixel_data + z1 + z) = bg;
-    }
-    if (borderwidth) {
-      for (z2 = 0; z2 < borderwidth; z2++) {
-        *(pixel_data + z1 + z + z2) = bordercolor;
-      }
-    }
-    pixel_data = pixel_data + kWindowWidth;
-  }
-  // border-bottom
-  if (borderwidth) {
-    for (v = 0; v < borderwidth; v++) {
-      for (z = 0; z < width + borderwidth*2; z++) {
-        *(pixel_data + z) = bordercolor;
-      }
-      pixel_data = pixel_data + kWindowWidth;
-    }
-  }
-}
 
 void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
   int v, z, z2;
@@ -747,7 +703,7 @@ void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, in
       }
     }
     for (z = 0; z < width; z++) {
-      *(buf_p + z) = 1;
+      *(buf_p + z + z1) = bg;
     }
     if (borderwidth) {
       for (z2 = 0; z2 < borderwidth; z2++) {
@@ -767,85 +723,16 @@ void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, in
   }
 }
 
-void draw_bitmap() {
+void draw_bitmap(int y_start) {
   uint32_t *pixel_data = (uint32_t *)gXImage->data;
   buf_p = buf_p1;
-
-  for (int n = 0; n < kWindowWidth*kWindowHeight; n++) {
-    *(pixel_data + n) = 1;
-  }
-
-/*  for (i = x, p = 0; i < x_max; i++, p++) {
-    for (j = y, q = 0; j < y_max; j++, q++) {
-      if (i < 0 || j < 0 || i >= WIDTH || j >= HEIGHT) continue;
-
-      image[j][i] = bitmap->buffer[q * bitmap->width + p];
-    }
-  }*/
-}
-
-void drawdiv1(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
-  uint32_t *pixel_data = (uint32_t *)gXImage->data;
-  int v, z, z2;
-  int z1 = 0;
-
-  if (y >= kWindowHeight-1) {
-    return;
-  }
-
-  if (y < 0) {
-    pixel_data = pixel_data + x;
-  }
-  else {
-    pixel_data = pixel_data + (kWindowWidth * y) + x;
-  }
-  // border-top
-  if (borderwidth) {
-    for (v = 0; v < borderwidth; v++) {
-      for (z = 0; z < width + borderwidth*2; z++) {
-        *(pixel_data + z) = bordercolor;
-      }
-      pixel_data = pixel_data + kWindowWidth;
-      if (y + v >= kWindowHeight-1) {
-        return;
-      }
-    }
-  }
-  for (v = 0; v < height; v++) {
-    if ((y + v) <= 0) {
-      continue;
-    } 
-    if (borderwidth) {
-      for (z1 = 0; z1 < borderwidth; z1++) {
-        *(pixel_data + z1) = bordercolor;
-      }
-    }
-    for (z = 0; z < width; z++) {
-      *(pixel_data + z1 + z) = bg;
-    }
-    if (borderwidth) {
-      for (z2 = 0; z2 < borderwidth; z2++) {
-        *(pixel_data + z1 + z + z2) = bordercolor;
-      }
-    }
-    pixel_data = pixel_data + kWindowWidth;
-    if (y + v >= kWindowHeight-1) {
-      return;
-    }
-  }
-  // border-bottom
-  if (borderwidth) {
-    for (v = 0; v < borderwidth; v++) {
-      for (z = 0; z < width + borderwidth*2; z++) {
-        *(pixel_data + z) = bordercolor;
-      }
-      pixel_data = pixel_data + kWindowWidth;
-      if (y + v >= kWindowHeight-1) {
-        return;
-      }
-    }
+  int l, n;
+  for (l = y_start * kWindowWidth, n = 0; l < buf_size && n < kWindowWidth*kWindowHeight; l++, n++) {
+    if (l <= 0) continue;
+    *(pixel_data + n) = *(buf_p + l);
   }
 }
+
 
 void drawtext(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color) {
   uint32_t *pixel_data = (uint32_t *)gXImage->data;
