@@ -94,7 +94,7 @@ char *my_strdup(char *s);
 struct tnode *talloc(void);
 struct stylenode *salloc(void);
 void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor);
-void drawtext(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color);
+void bitmap_text(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color);
 void draw_bitmap(int y);
 //buffer
 static int *buf_p;
@@ -615,7 +615,8 @@ int main(int argc, char **argv) {
       for (n1 = 0; n1 < num_chars; n1++ ) {
         error = FT_Load_Char(face, tags_stack[k]->textnode[n1], FT_LOAD_RENDER );
         if ( error ) continue;   
-        drawtext(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+        bitmap_text(&slot->bitmap, slot->bitmap_left + pen.x, pen.y-slot->bitmap_top, tags_stack[k]->css->width.val, tags_stack[k]->css->color);
+        draw_bitmap(0);
         pen.x += slot->advance.x/64; 
         if ((pen.x - tags_stack[k]->css->x) > (tags_stack[k]->css->width.val - slot->advance.x/64 - tags_stack[k]->css->paddingright)) {
           pen.x = tags_stack[k]->css->x + tags_stack[k]->css->paddingleft;
@@ -734,26 +735,20 @@ void draw_bitmap(int y_start) {
 }
 
 
-void drawtext(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color) {
-  uint32_t *pixel_data = (uint32_t *)gXImage->data;
+void bitmap_text(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color) {
   FT_Int i, j, p, q;
   FT_Int x_max = x + bitmap->width;
   FT_Int y_max = y + bitmap->rows;
+  buf_p = buf_p1;
 
-  if (y >= kWindowHeight-1) {
-    return;
-  }
-  pixel_data = pixel_data + (kWindowWidth * y) + x;
+  buf_p = buf_p + (kWindowWidth * y) + x;
   for (i = y, p = 0; i < y_max; i++, p++) {
     for (j = x, q = 0; j < x_max; j++, q++) {
       if (bitmap->buffer[p * bitmap->width + q] != 0) {
-        *(pixel_data + q) = color;
+        *(buf_p + q) = color;
       }
     }
-    pixel_data = pixel_data + kWindowWidth;
-    if (i >= kWindowHeight-1) {
-      return;
-    }
+    buf_p = buf_p + kWindowWidth;
   }
 }
 
