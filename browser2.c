@@ -60,6 +60,7 @@ struct stylenode {
   int paddingright;
   int paddingbottomline;
   int x;
+  int x0;
   int y;
   int y0;
   int y1;
@@ -68,6 +69,11 @@ struct stylenode {
   int borderwidth;
   int bordercolor;
   int all_height;
+  int position; // 0, 1 - absolute, 2 - relative, 3- fixed
+  int top; 
+  int left; 
+  int right; 
+  int bottom; 
 };
 
 struct tnode {
@@ -263,16 +269,54 @@ int main(int argc, char **argv) {
               stack[stack_size]->css->width.val = atoi(word);
             }
           }
+        } else if (strcmp("top", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->top = atoi(word);
+            }
+          }
+        } else if (strcmp("bottom", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->bottom = atoi(word);
+            }
+          }
+        } else if (strcmp("left", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->left = atoi(word);
+            }
+          } 
+        }  else if (strcmp("right", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              stack[stack_size]->css->right = atoi(word);
+            }
+          } 
         } else if (strcmp("background", word) == 0){
           while (getword(word) != ';') {
             if (isalnum(word[0])) {
               stack[stack_size]->css->bg = (int)strtol(word, NULL, 16);
             }
           } 
+        } else if (strcmp("position", word) == 0){
+          while (getword(word) != ';') {
+            if (isalnum(word[0])) {
+              if (strcmp("absolute", word) == 0) {
+                stack[stack_size]->css->position = 1;
+              } else if (strcmp("relative", word) == 0) {
+                stack[stack_size]->css->position = 2;
+              } else if (strcmp("fixed", word) == 0) {
+                stack[stack_size]->css->position = 3;
+              } else {
+                stack[stack_size]->css->position = 0;
+              }
+            }
+          } 
         } else if (strcmp("color", word) == 0){
           while (getword(word) != ';') {
             if (isalnum(word[0])) {
-              stack[stack_size]->css->color = (int)strtol(word, NULL, 16);
+                stack[stack_size]->css->position = (int)strtol(word, NULL, 16);
             }
           } 
         } else if (strcmp("fontsize", word) == 0){
@@ -388,6 +432,16 @@ int main(int argc, char **argv) {
     tags_stack[k]->css->y = y;
     tags_stack[k]->css->y0 = y;
 
+    //position: absolute
+    if (tags_stack[k]->css->position == 1) {
+      tags_stack[k]->css->x += tags_stack[k]->css->left;
+      tags_stack[k]->css->y = tags_stack[k]->css->top;
+      if (tags_stack[k]->parent) {
+        tags_stack[k]->css->y += tags_stack[k]->parent->css->y0;
+      }
+      tags_stack[k]->css->y0 = tags_stack[k]->css->y;
+    }
+
     if (!tags_stack[k]->css->bg && tags_stack[k]->parent) {
       tags_stack[k]->css->bg = tags_stack[k]->parent->css->bg;
     }
@@ -402,12 +456,12 @@ int main(int argc, char **argv) {
       tags_stack[k]->css->color = tags_stack[k]->parent->css->color;
     }
 
-    // если ест padding у родителя делаем отступ для элемента
-    if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft) {
+    // если ест padding у родителя делаем отступ для элемента, кроме position: fixed and absolute
+    if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft && tags_stack[k]->css->position != 1) {
         tags_stack[k]->css->x += tags_stack[k]->parent->css->paddingleft;
     } 
     // если margin делаем отступ для элемента
-    if (tags_stack[k]->css->marginleft) {
+    if (tags_stack[k]->css->marginleft && tags_stack[k]->css->position != 1) {
         tags_stack[k]->css->x += tags_stack[k]->css->marginleft;
     } 
     // если ширина не указана, растяшиваем блок на ширину родителя
@@ -434,7 +488,7 @@ int main(int argc, char **argv) {
     //margin-top
     int marg;
     marg = 0;
-    if (tags_stack[k]->css->margintop) {
+    if (tags_stack[k]->css->margintop && tags_stack[k]->css->position != 1) {
       int prev_sibling_marginbottom = 0;
       // find previous adjacent sibling
       if (k >= 1){
@@ -450,7 +504,7 @@ int main(int argc, char **argv) {
       }
       
       //Problem: The margins of adjacent siblings are collapsed 
-      if (prev_sibling_marginbottom) {
+      if (prev_sibling_marginbottom && tags_stack[k]->css->position != 1) {
         marg = (prev_sibling_marginbottom >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - prev_sibling_marginbottom); 
       // Collapsing Margins Between Parent and Child Elements . Only the largest margin applies 
       // the top margin of a block level element will always collapse with the top-margin of its first in-flow block level child 
@@ -537,8 +591,8 @@ int main(int argc, char **argv) {
       y += tags_stack[k]->css->marginbottom;
     }
 
-    // отрисовка элементов
-    if (tags_stack[k]->parent) {
+    // перерисовка ролителей элемента
+    if (tags_stack[k]->parent && tags_stack[k]->css->position != 1) {
       a  = tags_stack[k];
       a->parent->css->y = y;
       if (a->parent->css->height) {
@@ -766,6 +820,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->width.val = 0;
   p->css->bg = 0;
   p->css->x = 0;
+  p->css->x0 = 0;
   p->css->y = 0;
   p->css->y0 = 0;
   p->css->y1 = 0;
@@ -780,6 +835,11 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->fontsize = 0;
   p->css->borderwidth = 0;
   p->css->all_height = 0;
+  p->css->position = 0;
+  p->css->top = 0;
+  p->css->bottom = 0;
+  p->css->left = 0;
+  p->css->right = 0;
   // p->css->bg = 0xFFFFFF;
   return p;
 }
