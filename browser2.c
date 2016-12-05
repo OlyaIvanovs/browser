@@ -497,6 +497,10 @@ int main(int argc, char **argv) {
             break;
           }
           if (tags_stack[u]->parent == tags_stack[k]->parent) {
+            // если предыдущий элемент с pos absolute, то этот элемент не влияет на layout
+            if (tags_stack[u]->css->position == 1) {
+              continue;
+            }
             prev_sibling_marginbottom = tags_stack[u]->css->marginbottom;
             break;
           }
@@ -599,14 +603,21 @@ int main(int argc, char **argv) {
         y = a->parent->css->y0 + a->parent->css->borderwidth + a->parent->css->paddingtop + a->parent->css->height;
       }
 
-      // находим всех родителей и перерисовываем их
+      // находим всех родителей и перерисовываем их , блоки c position absolute не участвуют в layoute
       u = 0;
       b = a->parent;
-      st[u] = b;
-      while (b->parent) {
-        st[++u] = b->parent;
-        b = b->parent;
-      }
+      st[u] = b;  
+      if (b->css->position != 1) {  
+        while (b && b->parent) {
+          if (b->parent->css->position == 1) { 
+            b = 0;
+          } else {
+            st[++u] = b->parent;
+            b = b->parent;
+          }
+        }
+      } 
+      
 
       int num_elems;
       int paddingbottomheight = 0;
@@ -813,7 +824,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p = talloc(); /* make a new node */
   p->name = my_strdup(w);
   p->parent = stack[stack_size];
-  p->classname = NULL;
+  p->classname = 0;
   p->textnode = NULL;
   p->css = salloc();
   p->css->height = 0;
