@@ -432,14 +432,50 @@ int main(int argc, char **argv) {
     tags_stack[k]->css->y = y;
     tags_stack[k]->css->y0 = y;
 
+
+    // если ширина не указана, растяшиваем блок на ширину родителя
+    if (tags_stack[k]->css->width.val == 0) {
+       if (tags_stack[k]->parent) {
+        tags_stack[k]->css->width.val = tags_stack[k]->parent->css->width.val - tags_stack[k]->css->borderwidth*2;
+        // изменяем ширину если есть padding
+        if (tags_stack[k]->parent->css->paddingleft || tags_stack[k]->parent->css->paddingright) {
+            tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
+        }
+        // изменяем ширину если есть margin
+        if (tags_stack[k]->css->marginleft || tags_stack[k]->css->marginright) {
+          tags_stack[k]->css->width.val -= (tags_stack[k]->css->marginleft + tags_stack[k]->css->marginright);
+        }
+      } else {
+        tags_stack[k]->css->width.val = kWindowWidth - tags_stack[k]->css->borderwidth*2;
+      }
+    } else if ((tags_stack[k]->parent && tags_stack[k]->css->width.val < tags_stack[k]->parent->css->width.val) || (tags_stack[k]->css->width.val < kWindowWidth)) {
+      if (tags_stack[k]->css->paddingleft || tags_stack[k]->css->paddingright) {
+        tags_stack[k]->css->width.val += (tags_stack[k]->css->paddingleft + tags_stack[k]->css->paddingright);
+      }
+    }
+
     //position: absolute
     if (tags_stack[k]->css->position == 1) {
-      tags_stack[k]->css->x += tags_stack[k]->css->left;
-      tags_stack[k]->css->y = tags_stack[k]->css->top;
-      if (tags_stack[k]->parent) {
-        tags_stack[k]->css->y += tags_stack[k]->parent->css->y0;
+      // Top and left take priority over bottom and right.
+      if (tags_stack[k]->css->left >= 0) {
+        tags_stack[k]->css->x += tags_stack[k]->css->left;
+      } else if (tags_stack[k]->css->right >= 0) {
+        if (tags_stack[k]->parent) {
+          tags_stack[k]->css->x += tags_stack[k]->parent->css->width.val - tags_stack[k]->css->right - tags_stack[k]->css->width.val;
+        } else {
+          tags_stack[k]->css->x += kWindowWidth - tags_stack[k]->css->right - tags_stack[k]->css->width.val;
+        }
       }
-      tags_stack[k]->css->y0 = tags_stack[k]->css->y;
+
+      if (tags_stack[k]->css->top >= 0) {
+        tags_stack[k]->css->y = tags_stack[k]->css->top;
+        if (tags_stack[k]->parent) {
+          tags_stack[k]->css->y += tags_stack[k]->parent->css->y0;
+        }
+        tags_stack[k]->css->y0 = tags_stack[k]->css->y;
+      } else if (tags_stack[k]->css->bottom >= 0) {
+        // ???
+      }
     }
 
     if (!tags_stack[k]->css->bg && tags_stack[k]->parent) {
@@ -464,26 +500,6 @@ int main(int argc, char **argv) {
     if (tags_stack[k]->css->marginleft && tags_stack[k]->css->position != 1) {
         tags_stack[k]->css->x += tags_stack[k]->css->marginleft;
     } 
-    // если ширина не указана, растяшиваем блок на ширину родителя
-    if (tags_stack[k]->css->width.val == 0) {
-       if (tags_stack[k]->parent) {
-        tags_stack[k]->css->width.val = tags_stack[k]->parent->css->width.val - tags_stack[k]->css->borderwidth*2;
-        // изменяем ширину если есть padding
-        if (tags_stack[k]->parent->css->paddingleft || tags_stack[k]->parent->css->paddingright) {
-            tags_stack[k]->css->width.val -= (tags_stack[k]->parent->css->paddingleft + tags_stack[k]->parent->css->paddingright);
-        }
-        // изменяем ширину если есть margin
-        if (tags_stack[k]->css->marginleft || tags_stack[k]->css->marginright) {
-          tags_stack[k]->css->width.val -= (tags_stack[k]->css->marginleft + tags_stack[k]->css->marginright);
-        }
-      } else {
-        tags_stack[k]->css->width.val = kWindowWidth - tags_stack[k]->css->borderwidth*2;
-      }
-    } else if ((tags_stack[k]->parent && tags_stack[k]->css->width.val < tags_stack[k]->parent->css->width.val) || (tags_stack[k]->css->width.val < kWindowWidth)) {
-      if (tags_stack[k]->css->paddingleft || tags_stack[k]->css->paddingright) {
-        tags_stack[k]->css->width.val += (tags_stack[k]->css->paddingleft + tags_stack[k]->css->paddingright);
-      }
-    }
 
     //margin-top
     int marg;
@@ -847,10 +863,10 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->css->borderwidth = 0;
   p->css->all_height = 0;
   p->css->position = 0;
-  p->css->top = 0;
-  p->css->bottom = 0;
-  p->css->left = 0;
-  p->css->right = 0;
+  p->css->top = -1;
+  p->css->bottom = -1;
+  p->css->left = -1;
+  p->css->right = -1;
   // p->css->bg = 0xFFFFFF;
   return p;
 }
