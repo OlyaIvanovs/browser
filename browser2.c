@@ -423,15 +423,32 @@ int main(int argc, char **argv) {
   x = y = body_x = body_y = 0;
   // draw html elements
   for (k=0; k<tags_num; k++) {
-    if (tags_stack[k]->parent) {
-      x = tags_stack[k]->parent->css->x + tags_stack[k]->parent->css->borderwidth;
-      y = tags_stack[k]->parent->css->y;
-    } 
-    
-    tags_stack[k]->css->x = x;
-    tags_stack[k]->css->y = y;
-    tags_stack[k]->css->y0 = y;
-
+     //position: absolute for first parent with positin relative. 
+    // A page element with relative positioning gives the control to absolutely position children elements inside of it.
+    if (tags_stack[k]->css->position == 1) {
+      b = tags_stack[k]->parent; 
+      if (b->css->position != 2) {  //2 - relative
+        while (b && b->parent) {
+          if (b->parent->css->position == 2) { 
+            b = 0;
+          } else {
+            b = b->parent;
+          }
+        }
+      } 
+      tags_stack[k]->css->x = b->css->x;
+      tags_stack[k]->css->y = b->css->y;
+      tags_stack[k]->css->y0 = b->css->y;
+    } else {
+      if (tags_stack[k]->parent) {
+        x = tags_stack[k]->parent->css->x + tags_stack[k]->parent->css->borderwidth;
+        y = tags_stack[k]->parent->css->y;
+      } 
+      
+      tags_stack[k]->css->x = x;
+      tags_stack[k]->css->y = y;
+      tags_stack[k]->css->y0 = y;
+    }
 
     // если ширина не указана, растяшиваем блок на ширину родителя
     if (tags_stack[k]->css->width.val == 0) {
