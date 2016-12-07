@@ -439,6 +439,10 @@ int main(int argc, char **argv) {
       tags_stack[k]->css->x = b->css->x;
       tags_stack[k]->css->y = b->css->y;
       tags_stack[k]->css->y0 = b->css->y;
+    } else if (tags_stack[k]->css->position == 3) {
+      tags_stack[k]->css->x = 0;
+      tags_stack[k]->css->y = 0;
+      tags_stack[k]->css->y0 = 0;
     } else {
       if (tags_stack[k]->parent) {
         x = tags_stack[k]->parent->css->x + tags_stack[k]->parent->css->borderwidth;
@@ -495,33 +499,33 @@ int main(int argc, char **argv) {
       }
     }
 
-    if (!tags_stack[k]->css->bg && tags_stack[k]->parent) {
+    if (!tags_stack[k]->css->bg && tags_stack[k]->parent && tags_stack[k]->css->position != 3) {
       tags_stack[k]->css->bg = tags_stack[k]->parent->css->bg;
     }
 
-    if (!tags_stack[k]->css->fontsize && tags_stack[k]->parent) {
+    if (!tags_stack[k]->css->fontsize && tags_stack[k]->parent && tags_stack[k]->css->position != 3) {
       tags_stack[k]->css->fontsize = tags_stack[k]->parent->css->fontsize;
     } else if (!tags_stack[k]->css->fontsize) {
       tags_stack[k]->css->fontsize = 20;
     }
 
-    if (!tags_stack[k]->css->color && tags_stack[k]->parent) {
+    if (!tags_stack[k]->css->color && tags_stack[k]->parent && tags_stack[k]->css->position != 3) {
       tags_stack[k]->css->color = tags_stack[k]->parent->css->color;
     }
 
     // если ест padding у родителя делаем отступ для элемента, кроме position: fixed and absolute
-    if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft && tags_stack[k]->css->position != 1) {
+    if (tags_stack[k]->parent && tags_stack[k]->parent->css->paddingleft && tags_stack[k]->css->position != 1 && tags_stack[k]->css->position != 3) {
         tags_stack[k]->css->x += tags_stack[k]->parent->css->paddingleft;
     } 
     // если margin делаем отступ для элемента
-    if (tags_stack[k]->css->marginleft && tags_stack[k]->css->position != 1) {
+    if (tags_stack[k]->css->marginleft && tags_stack[k]->css->position != 1 && tags_stack[k]->css->position != 3) {
         tags_stack[k]->css->x += tags_stack[k]->css->marginleft;
     } 
 
     //margin-top
     int marg;
     marg = 0;
-    if (tags_stack[k]->css->margintop && tags_stack[k]->css->position != 1) {
+    if (tags_stack[k]->css->margintop && tags_stack[k]->css->position != 1 && tags_stack[k]->css->position != 3) {
       int prev_sibling_marginbottom = 0;
       // find previous adjacent sibling
       if (k >= 1){
@@ -541,7 +545,7 @@ int main(int argc, char **argv) {
       }
       
       //Problem: The margins of adjacent siblings are collapsed 
-      if (prev_sibling_marginbottom && tags_stack[k]->css->position != 1) {
+      if (prev_sibling_marginbottom && tags_stack[k]->css->position != 1 && tags_stack[k]->css->position != 3) {
         marg = (prev_sibling_marginbottom >= tags_stack[k]->css->margintop) ? 0 : (tags_stack[k]->css->margintop - prev_sibling_marginbottom); 
       // Collapsing Margins Between Parent and Child Elements . Only the largest margin applies 
       // the top margin of a block level element will always collapse with the top-margin of its first in-flow block level child 
@@ -629,7 +633,7 @@ int main(int argc, char **argv) {
     }
 
     // перерисовка ролителей элемента
-    if (tags_stack[k]->parent && tags_stack[k]->css->position != 1) {
+    if (tags_stack[k]->parent && tags_stack[k]->css->position != 1 && tags_stack[k]->css->position != 3) {
       a  = tags_stack[k];
       a->parent->css->y = y;
       if (a->parent->css->height) {
