@@ -99,13 +99,17 @@ int binsearch(char *word, char *keywords[], int n);
 char *my_strdup(char *s);
 struct tnode *talloc(void);
 struct stylenode *salloc(void);
-void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor);
+void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor, int num);
 void bitmap_text(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color);
 void draw_bitmap(int y);
 //buffer
 static int *buf_p;
 static int *buf_p1;
 static int buf_size;
+
+static int *a_buf_p;
+static int *a_buf_p1;
+static int a_buf_size;
 
 
 int main(int argc, char **argv) {
@@ -683,6 +687,13 @@ int main(int argc, char **argv) {
   for (int k = 0; k < buf_size; k++) {
     buf_p[k] = 1;
   }
+  // for window actvity
+  a_buf_size = kWindowWidth * kWindowHeight;
+  a_buf_p = (int *)malloc(a_buf_size * sizeof(int));
+  a_buf_p1 = a_buf_p;
+  for (int k = 0; k < a_buf_size; k++) {
+    a_buf_p[k] = 0;
+  }
 
 
   for (k=0; k<tags_num; k++) {
@@ -695,7 +706,7 @@ int main(int argc, char **argv) {
     tags_stack[k]->css->all_height = all_height;
 
     bitmap_div(tags_stack[k]->css->x, tags_stack[k]->css->y0, tags_stack[k]->css->all_height,
-           tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor); 
+           tags_stack[k]->css->width.val, tags_stack[k]->css->bg, tags_stack[k]->css->borderwidth, tags_stack[k]->css->bordercolor, k); 
     draw_bitmap(0);
 
     // текст элемента
@@ -754,13 +765,21 @@ int main(int argc, char **argv) {
           if (y_start < 0) {
             y_start = 0; 
           }
+          mouse_scroll = 1;
         } else if (event.xbutton.button == 5) {
           y_start += 5;
           if (y_start > tags_stack[0]->css->y - kWindowHeight) {
             y_start = tags_stack[0]->css->y - kWindowHeight;
           }
+          mouse_scroll = 1;
+        } else if (event.xbutton.button == 1) {
+          //change bg by click
+          int num_click_div = *(a_buf_p + (event.xbutton.y - 1)* kWindowWidth + event.xbutton.x);
+          tags_stack[num_click_div]->css->bg = (int)strtol("25E314", NULL, 16);
+          bitmap_div(tags_stack[num_click_div]->css->x, tags_stack[num_click_div]->css->y0, tags_stack[num_click_div]->css->all_height,
+           tags_stack[num_click_div]->css->width.val, tags_stack[num_click_div]->css->bg, tags_stack[num_click_div]->css->borderwidth, tags_stack[num_click_div]->css->bordercolor, k); 
+          draw_bitmap(y_start);
         }
-        mouse_scroll = 1;
       }
 
       if (mouse_scroll && tags_stack[0]->css->y > kWindowHeight && y_start > 0 && y_start < (tags_stack[0]->css->y - kWindowHeight)) {
@@ -785,45 +804,56 @@ int main(int argc, char **argv) {
 }
 
 
-void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor) {
+void bitmap_div(int x, int y, int height, int width, int bg, int borderwidth, int bordercolor, int num) {
   int v, z, z2;
   int z1 = 0;
-  buf_p = buf_p1;
-
+  
   buf_p = buf_p + (kWindowWidth * y) + x;
+  a_buf_p = a_buf_p + (kWindowWidth * y) + x;
   if (borderwidth) {
     for (v = 0; v < borderwidth; v++) {
       for (z = 0; z < width + borderwidth*2; z++) {
         *(buf_p + z) = bordercolor;
+        *(a_buf_p + z) = num;
       }
       buf_p = buf_p + kWindowWidth;
+      a_buf_p = a_buf_p + kWindowWidth;
     }
   }
   for (v = 0; v < height; v++) { 
     if (borderwidth) {
       for (z1 = 0; z1 < borderwidth; z1++) {
         *(buf_p + z1) = bordercolor;
+        *(a_buf_p + z1) = num;
       }
     }
     for (z = 0; z < width; z++) {
       *(buf_p + z + z1) = bg;
+      *(a_buf_p + z + z1) = num;
     }
     if (borderwidth) {
       for (z2 = 0; z2 < borderwidth; z2++) {
         *(buf_p + z1 + z + z2) = bordercolor;
+        *(a_buf_p + z1 + z + z2) = num;
       }
     }
     buf_p = buf_p + kWindowWidth;
+    a_buf_p = a_buf_p + kWindowWidth;
   }
   // border-bottom
   if (borderwidth) {
     for (v = 0; v < borderwidth; v++) {
       for (z = 0; z < width + borderwidth*2; z++) {
         *(buf_p + z) = bordercolor;
+        *(a_buf_p + z) = num;
       }
       buf_p = buf_p + kWindowWidth;
+      a_buf_p = a_buf_p + kWindowWidth;
     }
   }
+
+  buf_p = buf_p1;
+  a_buf_p = a_buf_p1;
 }
 
 void draw_bitmap(int y_start) {
