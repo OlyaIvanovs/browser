@@ -79,6 +79,7 @@ struct stylenode {
 struct tnode {
   char *name;
   char *classname;
+  char *id;
   char *textnode;
   struct tnode *parent;
   struct stylenode *css;
@@ -209,6 +210,7 @@ int main(int argc, char **argv) {
 
 
   //парсинг
+  int opentexttag = 0;
   while (getword(word) != EOF) {
   // для закрывающего тега
     if (word[0] == '/') {
@@ -255,6 +257,13 @@ int main(int argc, char **argv) {
       while (getword(word) != '"') {
         if (isalpha(word[0])) {
           stack[stack_size]->classname = my_strdup(word);
+        }
+      }
+    } else if (strcmp("id", word) == 0) {
+      while (getword(word) != '"');
+      while (getword(word) != '"') {
+        if (isalpha(word[0])) {
+          stack[stack_size]->id = my_strdup(word);
         }
       }
       //стили
@@ -385,26 +394,30 @@ int main(int argc, char **argv) {
     } else {
       //textnode 1.после '>'
       if (word[0] == '>'){
-        // отделяем слово от '>'
-        l = 1;
-        while(word[l] != '\0') {
-          word[l-1] = word[l];
-          l++;
+        if (word[1] == '\0') {
+          opentexttag = 1;
+        } else {
+          // отделяем слово от '>'
+          l = 1;
+          while(word[l] != '\0') {
+            word[l-1] = word[l];
+            l++;
+          } 
+          word[l-1] = '\0';
+          if (l > 1) {
+            gettextnode(textnode);
+            strcpy(htextnode, word);
+            strcat(htextnode, textnode);
+            root = addnode(root, "textnode");
+            stack[i] = root;
+            tags_stack[tags_num] = root;
+            stack[i]->textnode = my_strdup(htextnode);
+            stack_size = i;
+            i++;
+            tags_num++;
+          }
         }
-        word[l-1] = '\0';
-        if (l > 1) {
-          gettextnode(textnode);
-          strcpy(htextnode, word);
-          strcat(htextnode, textnode);
-          root = addnode(root, "textnode");
-          stack[i] = root;
-          tags_stack[tags_num] = root;
-          stack[i]->textnode = my_strdup(htextnode);
-          stack_size = i;
-          i++;
-          tags_num++;
-        }
-      } else {
+      } else if (opentexttag) {
         // если срока отделена от < пробелом, то:
         gettextnode(textnode);
         strcpy(htextnode, word);
@@ -416,6 +429,10 @@ int main(int argc, char **argv) {
         stack_size = i;
         i++;
         tags_num++;
+        opentexttag = 0;
+      } else {
+        //ignore other tokens
+        printf("Do nothing with %s\n", word);
       }
     } 
   }
@@ -892,6 +909,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->name = my_strdup(w);
   p->parent = stack[stack_size];
   p->classname = 0;
+  p->id = 0;
   p->textnode = NULL;
   p->css = salloc();
   p->css->height = 0;
