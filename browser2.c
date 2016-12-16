@@ -251,7 +251,6 @@ int main(int argc, char **argv) {
       stack_size = i;
       i++;
       tags_num++;
-      // Yазвание класса
     } else if (strcmp("class", word) == 0) {
       while (getword(word) != '"');
       while (getword(word) != '"') {
