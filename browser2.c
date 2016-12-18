@@ -85,6 +85,25 @@ struct tnode {
   struct stylenode *css;
 };
 
+enum EventType {
+  Event_Click = 0,
+
+  Event_DoubleClick,
+  Event_ContextMenu,
+  Event_Hover,
+  Event_KeyDown,
+  Event_KeyPress,
+
+};
+
+struct events {
+  enum EventType type;
+  int num_elem;
+  int aim_num_elem;
+  char *new_css_quality;
+  char *new_css_value;
+};
+
 char *keywords[] = {
   "a", "div", "h1", "p", "span"
 };
@@ -757,6 +776,41 @@ int main(int argc, char **argv) {
       }
     }
   }
+
+
+
+
+  //read
+  FILE *f;
+  char cc;
+  f=fopen("script.js","r");
+  char strr[MAXTEXT];
+  while((cc=fgetc(f))!=EOF){
+      printf("%c",cc);
+      *strr = cc;
+      strr++;
+  }
+
+  fclose(f);
+  printf("%s\n", strr);
+  struct events *event1;
+  event1 = (struct events *) malloc(sizeof(struct events));
+  event1->type = Event_Click;
+  event1->num_elem = -1;
+  event1->aim_num_elem = -1;
+  for (k=0; k<tags_num; k++)  {
+    if (tags_stack[k]->id) {
+    }
+    if (tags_stack[k]->id && strcmp("changebgtest", tags_stack[k]->id) == 0) {
+      event1->num_elem = k;
+    }
+    if (tags_stack[k]->id && strcmp("changebgtesta", tags_stack[k]->id) == 0) {
+      event1->aim_num_elem = k;
+    }
+  }
+  event1->new_css_quality = "background";
+  event1->new_css_value = "#66096b";
+
   
   gRunning = 1;
   int y_start = 0;
@@ -791,10 +845,17 @@ int main(int argc, char **argv) {
         } else if (event.xbutton.button == 1) {
           //change bg by click
           int num_click_div = *(a_buf_p + (event.xbutton.y - 1)* kWindowWidth + event.xbutton.x);
-          tags_stack[num_click_div]->css->bg = (int)strtol("25E314", NULL, 16);
-          bitmap_div(tags_stack[num_click_div]->css->x, tags_stack[num_click_div]->css->y0, tags_stack[num_click_div]->css->all_height,
-           tags_stack[num_click_div]->css->width.val, tags_stack[num_click_div]->css->bg, tags_stack[num_click_div]->css->borderwidth, tags_stack[num_click_div]->css->bordercolor, k); 
-          draw_bitmap(y_start);
+          // tags_stack[num_click_div]->css->bg = (int)strtol("25E314", NULL, 16);
+          // bitmap_div(tags_stack[num_click_div]->css->x, tags_stack[num_click_div]->css->y0, tags_stack[num_click_div]->css->all_height,
+          //  tags_stack[num_click_div]->css->width.val, tags_stack[num_click_div]->css->bg, tags_stack[num_click_div]->css->borderwidth, tags_stack[num_click_div]->css->bordercolor, k); 
+          // draw_bitmap(y_start);
+          if (event1->type == Event_Click && event1->num_elem == num_click_div) {
+            int num_aim_elem = event1->aim_num_elem;
+            tags_stack[num_aim_elem]->css->bg = (int)strtol("25E314", NULL, 16);
+            bitmap_div(tags_stack[num_aim_elem]->css->x, tags_stack[num_aim_elem]->css->y0, tags_stack[num_aim_elem]->css->all_height,
+             tags_stack[num_aim_elem]->css->width.val, tags_stack[num_aim_elem]->css->bg, tags_stack[num_aim_elem]->css->borderwidth, tags_stack[num_click_div]->css->bordercolor, k); 
+            draw_bitmap(y_start);
+          }
         }
       }
 
@@ -900,6 +961,11 @@ void bitmap_text(FT_Bitmap *bitmap, FT_Int x, FT_Int y, int width, int color) {
   }
 }
 
+struct events *addevent(struct events *e, enum EventType type, char *id, char *div_id, char *css_quality, char *css_value) {
+  e->type = type;
+};
+
+
 
 struct tnode *addnode(struct tnode *p, char *w) {
   int cond;
@@ -908,7 +974,7 @@ struct tnode *addnode(struct tnode *p, char *w) {
   p->name = my_strdup(w);
   p->parent = stack[stack_size];
   p->classname = 0;
-  p->id = 0;
+  p->id = NULL;
   p->textnode = NULL;
   p->css = salloc();
   p->css->height = 0;
