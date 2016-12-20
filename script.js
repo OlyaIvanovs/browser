@@ -1,3 +1,3 @@
-s$('#changebg').on('click', function(){
- $('#changebg').css({'background' : '#25E314'});
+$('#changebgtest').on('click', function(){
+ $('#changebgtesta').css({'background' : '#25E314'});
 });

@@ -156,9 +156,6 @@ int main(int argc, char **argv) {
   char word[MAXWORD];
   char textnode[MAXTEXT];
   char htextnode[MAXTEXT];
-  char styleline[MAXLEN];
-  char param[MAXLEN];
-  char value[MAXLEN];
 
   int k, l, c, n;
   int index; // for margin, padding
@@ -778,36 +775,48 @@ int main(int argc, char **argv) {
   }
 
 
-
-
-  //read
+  //read js file
   FILE *f;
   char cc;
   f=fopen("script.js","r");
-  char strr[MAXTEXT];
+  char strr[MAXTEXT] = "";
+  char *strrr = strr;
+  char *sss = strr;
   while((cc=fgetc(f))!=EOF){
-      printf("%c",cc);
-      *strr = cc;
-      strr++;
+    if (!isspace(cc)) {
+      *strrr = cc;
+      strrr++;
+    }
   }
-
   fclose(f);
-  printf("%s\n", strr);
+
   struct events *event1;
   event1 = (struct events *) malloc(sizeof(struct events));
-  event1->type = Event_Click;
   event1->num_elem = -1;
   event1->aim_num_elem = -1;
-  for (k=0; k<tags_num; k++)  {
-    if (tags_stack[k]->id) {
+  char event_id_str[MAXTEXT] = "";
+  char *event_id = event_id_str;
+  while (*sss != '\0') {
+    if (*sss == '$' && *++sss == '(' && *++sss == '\'' && *++sss == '#') {
+      int u; 
+      for (u = 0; *++sss != '\''; u++) {
+        *(event_id + u) = *sss;
+      }
+      *(event_id + u) = '\0';
+      for (k=0; k<tags_num; k++)  {
+        if (tags_stack[k]->id && strcmp(event_id, tags_stack[k]->id) == 0) {
+          if (event1->num_elem < 0) {
+            event1->num_elem = k;
+          } else {
+            event1->aim_num_elem = k;
+          }
+        }
+      }
     }
-    if (tags_stack[k]->id && strcmp("changebgtest", tags_stack[k]->id) == 0) {
-      event1->num_elem = k;
-    }
-    if (tags_stack[k]->id && strcmp("changebgtesta", tags_stack[k]->id) == 0) {
-      event1->aim_num_elem = k;
-    }
+    sss++;
   }
+  
+  event1->type = Event_Click;
   event1->new_css_quality = "background";
   event1->new_css_value = "#66096b";
 
